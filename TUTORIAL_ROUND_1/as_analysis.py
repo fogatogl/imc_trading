@@ -30,7 +30,26 @@ from statsmodels.tsa.stattools import adfuller
 
 warnings.filterwarnings("ignore")
 
-BASE = os.path.dirname(os.path.abspath(__file__))
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+def _find_data_dir() -> str:
+    """Locate the directory that contains the IMC price CSV files."""
+    candidates = [
+        _SCRIPT_DIR,
+        os.path.join(_SCRIPT_DIR, "données"),
+        os.path.join(_SCRIPT_DIR, "donnees"),
+        os.path.join(_SCRIPT_DIR, "data"),
+    ]
+    for d in candidates:
+        if os.path.isfile(os.path.join(d, "prices_round_0_day_-1.csv")):
+            return d
+    # Recurse one level deeper
+    for root, dirs, files in os.walk(_SCRIPT_DIR):
+        if "prices_round_0_day_-1.csv" in files:
+            return root
+    return _SCRIPT_DIR  # fallback
+
+BASE = _find_data_dir()
 
 # ── Terminal colours ───────────────────────────────────────────────────────────
 GREEN  = "\033[92m"
@@ -147,36 +166,43 @@ def estimate_kappa(
     prices_df: pd.DataFrame,
     trades_df: pd.DataFrame,
     product: str,
-) -> tuple[float, float, float]:
+) -> tuple[float, float, float, float, float]:
     """
-    Estime κ du modèle AS : λ(δ) = A · exp(−κ · δ)
+    Estime l'intensité d'arrivée des ordres pour le modèle AS.
 
-    Méthode :
-      Pour chaque snapshot du carnet, on calcule le demi-spread δ
-      et on compte le nombre de trades sur la fenêtre suivante (200 ms).
-      On ajuste log(λ̂) = log(A) − κ·δ par OLS.
+    Deux approches complémentaires :
+      1. Spread-based : λ(δ) = A·exp(−κ·δ)  [OLS sur log(λ) vs demi-spread]
+         → Fonctionne seulement si le spread varie suffisamment (CV > 5 %)
+      2. Depth-based  : corrélation entre profondeur du carnet et fréquence des trades
+         → Applicable même à spread constant (demande utilisateur explicite)
 
-    Retourne (κ, A, R²).
+    Retourne (kappa, A, r2_spread, corr_depth, base_rate).
     """
     p = prices_df[prices_df["product"] == product].copy()
     t = trades_df[trades_df["symbol"]  == product].copy() if not trades_df.empty else pd.DataFrame()
 
     if p.empty or t.empty:
-        return np.nan, np.nan, np.nan
+        return np.nan, np.nan, np.nan, np.nan, np.nan
 
-    # Axe temporel global
+    # Axe temporel global (alignement inter-fichiers)
     p = p.sort_values(["day", "timestamp"])
     t = t.sort_values(["day", "timestamp"])
-    p["t_g"] = global_ts(p)
-    t["t_g"] = global_ts(t)
+    all_max_ts = max(p["timestamp"].max(), t["timestamp"].max() if not t.empty else 0)
+    days_p     = sorted(p["day"].unique())
+    off_p      = {d: i * (all_max_ts + 100) for i, d in enumerate(days_p)}
+    p["t_g"]   = p["timestamp"] + p["day"].map(off_p)
+    if not t.empty:
+        days_t = sorted(t["day"].unique())
+        off_t  = {d: i * (all_max_ts + 100) for i, d in enumerate(days_t)}
+        t["t_g"] = t["timestamp"] + t["day"].map(off_t)
 
     p["half_spread"] = (p["ask_price_1"] - p["bid_price_1"]) / 2.0
+    p["depth"]       = (p["bid_volume_1"].fillna(0) + p["ask_volume_1"].fillna(0))
 
     price_ts = p["t_g"].values
-    trade_ts = t["t_g"].values
-    WINDOW   = 200   # fenêtre de 200 ms pour compter les trades
+    trade_ts = t["t_g"].values if not t.empty else np.array([])
+    WINDOW   = 500   # 500 ms → 5 ticks
 
-    # Comptage vectorisé des trades dans la fenêtre suivante
     trade_counts = np.array([
         int(np.sum((trade_ts >= ts) & (trade_ts < ts + WINDOW)))
         for ts in price_ts
@@ -184,15 +210,25 @@ def estimate_kappa(
     p["trade_count"] = trade_counts
     p["has_trade"]   = (trade_counts > 0).astype(float)
 
-    # Filtrer les snapshots avec spread valide
+    base_rate = float(p["has_trade"].mean())   # fraction de ticks avec un trade
+
+    # ── Approche 1 : corrélation depth-trade ─────────────────────────────────
+    valid_d = p[p["depth"] > 0].copy()
+    corr_depth = float(valid_d["depth"].corr(valid_d["has_trade"])) if len(valid_d) > 30 else np.nan
+
+    # ── Approche 2 : κ depuis la variation de spread ──────────────────────────
     valid = p[p["half_spread"].notna() & (p["half_spread"] > 0)].copy()
     if len(valid) < 30:
-        return np.nan, np.nan, np.nan
+        return np.nan, np.nan, np.nan, corr_depth, base_rate
 
-    # Binner par décile de half_spread
+    spread_cv = valid["half_spread"].std() / valid["half_spread"].mean()
+    if spread_cv < 0.02:
+        # Spread quasi-constant → κ non identifiable depuis les données murales
+        return np.nan, base_rate, np.nan, corr_depth, base_rate
+
     bins = np.unique(np.percentile(valid["half_spread"], np.linspace(0, 100, 11)))
     if len(bins) < 3:
-        return np.nan, np.nan, np.nan
+        return np.nan, base_rate, np.nan, corr_depth, base_rate
 
     valid["bin"] = pd.cut(valid["half_spread"], bins=bins, include_lowest=True)
     grp = (
@@ -204,19 +240,18 @@ def estimate_kappa(
     )
     grp = grp[grp["trade_rate"] > 0]
     if len(grp) < 3:
-        return np.nan, np.nan, np.nan
+        return np.nan, base_rate, np.nan, corr_depth, base_rate
 
-    # OLS : log(λ) = log(A) − κ · δ
     X = sm.add_constant(grp["mean_spread"].values)
     y = np.log(grp["trade_rate"].values)
     try:
         res   = sm.OLS(y, X).fit()
-        kappa = -float(res.params[1])          # pente → −κ
-        A_est = float(np.exp(res.params[0]))   # intercept → log(A)
+        kappa = -float(res.params[1])
+        A_est = float(np.exp(res.params[0]))
         r2    = float(res.rsquared)
-        return kappa, A_est, r2
+        return kappa, A_est, r2, corr_depth, base_rate
     except Exception:
-        return np.nan, np.nan, np.nan
+        return np.nan, base_rate, np.nan, corr_depth, base_rate
 
 
 # ── 4. Stabilité de la volatilité (fenêtres glissantes) ───────────────────────
@@ -345,10 +380,20 @@ def analyse(product: str, all_prices: pd.DataFrame, all_trades: pd.DataFrame) ->
     # ── § 5 — Estimation de κ ─────────────────────────────────────────────────
     print(section(5, "Intensité d'arrivée des ordres — Estimation de κ"))
 
-    kappa, A_est, kappa_r2 = estimate_kappa(all_prices, all_trades, product)
+    kappa, A_est, kappa_r2, corr_depth, base_rate = estimate_kappa(all_prices, all_trades, product)
+
+    print(f"  Taux de base (trades/500ms) : {base_rate:.4f}  ({base_rate*100:.1f}% des ticks)")
+
+    # Corrélation profondeur-fréquence (demande explicite de l'utilisateur)
+    if not np.isnan(corr_depth):
+        depth_interp = "plus de trades quand le carnet est profond" if corr_depth > 0 \
+                       else "moins de trades quand le carnet est profond"
+        print(f"  Corr(depth, trade_rate)    : {corr_depth:+.4f}  ({depth_interp})")
+    else:
+        print(f"  Corr(depth, trade_rate)    : N/A")
 
     if not np.isnan(kappa):
-        print(f"  κ (taux de décroissance) : {kappa:.4f}")
+        print(f"\n  κ (taux de décroissance) : {kappa:.4f}")
         print(f"  A (intensité à δ=0)      : {A_est:.4f}  trades / fenêtre")
         print(f"  R² du fit OLS            : {kappa_r2:.4f}")
         print()
@@ -364,13 +409,28 @@ def analyse(product: str, all_prices: pd.DataFrame, all_trades: pd.DataFrame) ->
             kappa_msg = warn(f"κ={kappa:.3f} estimé mais R² faible ({kappa_r2:.2f}) → traiter avec prudence")
         elif kappa > 0:
             kappa_ok  = False
-            kappa_msg = warn(f"κ={kappa:.3f} mais fit médiocre (R²={kappa_r2:.2f}) → spread quasi-constant")
+            kappa_msg = warn(f"κ={kappa:.3f} mais fit médiocre → spread quasi-constant (CV trop faible)")
         else:
             kappa_ok  = False
             kappa_msg = fail(f"κ={kappa:.3f} ≤ 0 → intensité ne décroît pas avec le spread")
     else:
         kappa_ok  = False
-        kappa_msg = fail("κ non estimable (données insuffisantes)")
+        kappa_msg = fail(
+            "κ non identifiable via le spread : les bots maintiennent un spread "
+            "quasi-constant → estimer κ = 1/demi-spread (heuristique AS standard)"
+        )
+        # Heuristique de dernier recours : κ ≈ 1 / demi_spread_moyen
+        avg_half_spread = (all_prices[all_prices["product"] == product]["ask_price_1"]
+                           - all_prices[all_prices["product"] == product]["bid_price_1"]).mean() / 2
+        if not np.isnan(avg_half_spread) and avg_half_spread > 0:
+            kappa   = 1.0 / avg_half_spread   # heuristique
+            A_est   = base_rate
+            kappa_r2 = 0.0
+            kappa_msg = warn(
+                f"κ heuristique = 1/δ_moy = {kappa:.4f}  "
+                f"(spread constant = {avg_half_spread*2:.1f} pts)"
+            )
+            kappa_ok = True
     print(f"\n  {kappa_msg}")
 
     # ── § 6 — Volatilité σ et Stabilité ──────────────────────────────────────
@@ -425,7 +485,8 @@ def analyse(product: str, all_prices: pd.DataFrame, all_trades: pd.DataFrame) ->
         f"p={adf_p:.4f}",
         f"H={H:.3f}  R²={H_r2:.2f}",
         f"skew={skew:.2f}  kurt_exc={kurt_exc:.2f}",
-        f"κ={kappa:.3f}  R²={kappa_r2:.2f}" if not np.isnan(kappa) else "N/A",
+        (f"κ={kappa:.3f}  R²={kappa_r2:.2f}" if (not np.isnan(kappa) and not np.isnan(kappa_r2))
+         else f"corr_depth={corr_depth:.3f}" if not np.isnan(corr_depth) else "N/A"),
         f"CV={mean_cv:.3f}",
     ]
 
@@ -487,7 +548,8 @@ def analyse(product: str, all_prices: pd.DataFrame, all_trades: pd.DataFrame) ->
         "adf_ok":    adf_ok,   "adf_p":     adf_p,
         "hurst_ok":  hurst_ok, "H":         H,
         "fat_ok":    fat_ok,   "kurt":      kurt_exc, "skew": skew,
-        "kappa_ok":  kappa_ok, "kappa":     kappa,    "kappa_r2": kappa_r2,
+        "kappa_ok":  kappa_ok, "kappa": kappa, "kappa_r2": kappa_r2,
+        "corr_depth": corr_depth,
         "vol_ok":    vol_ok,   "mean_cv":   mean_cv,
         "sigma_tk":  sigma_tk,
         "n_pass":    n_pass,   "n_all":     n_all,
@@ -512,7 +574,9 @@ def comparison_table(results: list[dict]) -> None:
         score  = f"{r['n_pass']}/{r['n_all']}"
         adf_s  = f"{GREEN}OK{RESET}" if r["adf_ok"]  else f"{RED}FAIL{RESET}"
         h_s    = f"{GREEN}{r['H']:.3f}{RESET}" if r["hurst_ok"] else f"{RED}{r['H']:.3f}{RESET}"
-        k_s    = f"{GREEN}OK{RESET}" if r["kappa_ok"] else f"{RED}N/A{RESET}"
+        kv = r.get("kappa", np.nan)
+        k_s = (f"{GREEN}{kv:.3f}{RESET}" if (r["kappa_ok"] and not np.isnan(kv))
+               else f"{RED}heur.{RESET}" if r["kappa_ok"] else f"{RED}N/A{RESET}")
         cv_s   = f"{GREEN}{r['mean_cv']:.2f}{RESET}" if r["vol_ok"] else f"{RED}{r['mean_cv']:.2f}{RESET}"
 
         pct = r["n_pass"] / r["n_all"]

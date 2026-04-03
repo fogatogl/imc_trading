@@ -15,7 +15,25 @@ from plotly.subplots import make_subplots
 import dash
 from dash import dcc, html, Input, Output
 
-BASE = os.path.dirname(os.path.abspath(__file__))
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+def _find_data_dir() -> str:
+    """Locate the directory that contains the IMC price CSV files."""
+    candidates = [
+        _SCRIPT_DIR,
+        os.path.join(_SCRIPT_DIR, "données"),
+        os.path.join(_SCRIPT_DIR, "donnees"),
+        os.path.join(_SCRIPT_DIR, "data"),
+    ]
+    for d in candidates:
+        if os.path.isfile(os.path.join(d, "prices_round_0_day_-1.csv")):
+            return d
+    for root, _, files in os.walk(_SCRIPT_DIR):
+        if "prices_round_0_day_-1.csv" in files:
+            return root
+    return _SCRIPT_DIR
+
+BASE = _find_data_dir()
 
 # ── 1. Data Loading ───────────────────────────────────────────────────────────
 
