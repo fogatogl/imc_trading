@@ -10,9 +10,9 @@ class Trader:
         conversions = 1
         
         # --- PARAMÈTRES ---
-        PRODUCT = "TOMATOES" # Remplace par le nom réel (ex: "ORCHIDS")
-        WINDOW_LONG = 20000     # Fenêtre pour la MVA longue
-        WINDOW_FAST = 2500    # Fenêtre pour la MVA rapide
+        PRODUCT = "TOMATOES" 
+        WINDOW_LONG = 40     # Fenêtre pour la MVA longue
+        WINDOW_FAST = 5    # Fenêtre pour la MVA rapide
         POSITION_LIMIT = 80
         REBALANCE_THRESHOLD=50
         # 1. RÉCUPÉRATION DE L'HISTORIQUE (Mémoire du bot)
