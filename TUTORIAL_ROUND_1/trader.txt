@@ -1,4 +1,8 @@
+
+
+
 FONCTIONNEMENT :
+
 
 Les règles imposées (à ne pas changer)
 Le fichier Python doit obligatoirement respecter ces trois éléments pour que le moteur de 
@@ -14,6 +18,7 @@ porte d'entrée de ton algorithme. À chaque "tick" (itération) du marché, le 
 appelle cette méthode en lui passant l'état actuel du marché (state).
 
 
+
 PIèGE :
 
 Le piège classique : la mémoire (traderData)
@@ -27,6 +32,7 @@ C'est une simple chaîne de caractères (string) renvoyer à la fin du run(), et
 le simulateur redonnera exactement dans le même état au début de l'itération suivante 
 via state.traderData. L'astuce classique consiste à utiliser json.dumps() pour y stocker un 
 dictionnaire de tes historiques, puis json.loads() au tour suivant pour le récupérer.
+
 
 
 
@@ -77,4 +83,65 @@ timestamp (int) : L'heure ou le marqueur de temps actuel dans la simulation
 
 observations (Observation) : Ce sont des signaux externes ou des données spécifiques ajoutées 
 par le jeu. Dans les éditions précédentes de Prosperity, cela incluait par exemple le niveau 
-d'ensoleillement ou l'humidité, qui influençaient le prix futur de certains produits agricoles. C'est une information vitale à parser lorsqu'elle est disponible.
+d'ensoleillement ou l'humidité, qui influençaient le prix futur de certains produits agricoles. 
+C'est une information vitale à parser lorsqu'elle est disponible.
+
+
+
+
+
+TECHNIQUEMENT :
+
+Le code upploadé sera éxécuté sur une sandbox, donc impossible d'importer un xgboost par exemple
+Il faudra entraîner un modèle pour ensuite extraire de ce modèle un code python qui se lance
+sur un sandbox. Il va falloir extraire sa "substance" : les arbres de décision, les nœuds, 
+et les poids. 
+
+On doit intégrer la logique de décision du modèle directement dans le fichier Trader en 
+utilisant uniquement du code Python natif. Pour cela, il y a une méthode :
+
+La transpilation en code brut : Il existe des outils open-source en Python 
+(comme la librairie m2cgen - Model 2 Code Generator) qui prennent un modèle entraîné 
+(Scikit-Learn, XGBoost, LightGBM) et le traduisent automatiquement en une gigantesque 
+suite de if/else en pur Python. Il suffit ensuite de copies-colles cette fonction générée
+ directement dans la classe Trader. 
+ À chaque itération, on passe les variables de marché actuelles à cette fonction, 
+ et elle recrache la prédiction.
+
+
+Les pièges à éviter avec cette approche:
+Si on part sur du Machine Learning pur, il faut garder ces trois limites du concours en tête :
+
+La taille du fichier : L'upload sur Prosperity est souvent limité (par exemple à 50 ou 100 Ko). 
+Un modèle XGBoost avec des centaines d'arbres très profonds va générer un fichier Python énorme
+qui sera refusé. Il faut donc contraindre le modèle (limiter max_depth et n_estimators).
+
+Le temps d'exécution : Le code a une limite de temps stricte pour répondre à chaque tick 
+(souvent quelques dizaines de millisecondes). Une inférence trop complexe risque de faire 
+dépasser ce délai.
+
+
+
+
+CONSEIL GEMINI PRO IMPORTANT : 
+
+
+
+
+Les marchés financiers simulés par IMC comportent énormément de bruit 
+aléatoire. Un modèle complexe comme XGBoost risque très vite de "mémoriser" le bruit des 
+données d'entraînement au lieu de trouver de vraies tendances. Parfois, une régression 
+linéaire basique ou un modèle d'arbitrage purement mathématique bat un XGBoost mal calibré.
+
+
+Le Deep Learning brille quand on a des gigaoctets de données 
+et des clusters de calcul. IMC Prosperity est un concours de trading algorithmique haute 
+fréquence (HFT) simulé. Dans ce domaine, la réactivité, la simplicité et la gestion stricte 
+du risque dominent presque toujours la complexité prédictive.
+
+
+Les équipes qui gagnent ce concours (et passent la barre des 200 000 XIRECs) utilisent 
+très rarement du Machine Learning complexe. Elles s'appuient sur des modèles statistiques 
+beaucoup plus légers, de l'arbitrage pur, et surtout, d'excellentes stratégies de Market Making
+ (fournir de la liquidité en gérant intelligemment l'écart entre le prix d'achat et de vente 
+ en fonction de l'inventaire).
