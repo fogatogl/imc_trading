@@ -1,0 +1,12 @@
+STRATEGIE tomate : 
+
+-on caclule une mva rapide et une mva longue
+-on prend toute transaction favorable par rapport à la mva longue:
+    -on achète en dessous de mva longue - écart type
+    -on vend au dessus de mva longue + écart type
+
+-on se place entre la meilleure offre des makers et la mva courte
+-on stabilise notre portefeuille au niveau de la mva courte, on le fait plus souvent sans
+pour autant s'empecher de prendre des trades 
+
+
