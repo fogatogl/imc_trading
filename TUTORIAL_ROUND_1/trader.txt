@@ -1,0 +1,80 @@
+FONCTIONNEMENT :
+
+Les règles imposées (à ne pas changer)
+Le fichier Python doit obligatoirement respecter ces trois éléments pour que le moteur de 
+simulation puisse l'exécuter :
+
+L'import de la librairie d'IMC : Il faut importer leur module datamodel qui contient la 
+structure des objets (le carnet d'ordres, les trades, etc.).
+
+La classe principale : Elle doit impérativement s'appeler Trader.
+
+La méthode principale : Elle doit s'appeler run(self, state: TradingState). C'est l'unique 
+porte d'entrée de ton algorithme. À chaque "tick" (itération) du marché, le simulateur 
+appelle cette méthode en lui passant l'état actuel du marché (state).
+
+
+PIèGE :
+
+Le piège classique : la mémoire (traderData)
+Dans l'environnement de simulation d'IMC, la classe Trader peut parfois être réinstanciée 
+ou perdre ses attributs de classe (self.mon_historique) entre deux "ticks" temporels.
+
+Pour contourner ça et permettre à l'algorithme d'avoir de la "mémoire" 
+(par exemple, te souvenir des prix d'il y a 5 itérations pour faire une moyenne mobile), 
+l'API te fournit traderData.
+C'est une simple chaîne de caractères (string) renvoyer à la fin du run(), et que 
+le simulateur redonnera exactement dans le même état au début de l'itération suivante 
+via state.traderData. L'astuce classique consiste à utiliser json.dumps() pour y stocker un 
+dictionnaire de tes historiques, puis json.loads() au tour suivant pour le récupérer.
+
+
+
+
+STATE: PARAMèTRE
+
+Le paramètre state (qui est une instance de la classe TradingState du datamodel d'IMC) 
+est ta seule fenêtre sur le monde extérieur pendant la simulation. 
+Il contient absolument toutes les informations nécessaires pour prendre tes décisions 
+à un instant T.
+
+Voici la liste exhaustive de tous ses attributs, avec leurs types (en Python) et leur utilité :
+
+Les informations de marché
+order_depths (Dict[str, OrderDepth]) : C'est le nerf de la guerre. C'est un dictionnaire 
+qui contient le carnet d'ordres pour chaque produit. Pour un produit donné (ex: "TOMATOES"), 
+il te donne accès aux buy_orders (ce que les autres sont prêts à payer) et 
+aux sell_orders (le prix auquel les autres veulent vendre). 
+C'est là-dessus que tu calcules tes prix.
+
+listings (Dict[str, Listing]) : Un dictionnaire contenant 
+les informations statiques sur les produits disponibles sur le marché 
+(le symbole du produit, la devise dans laquelle il est coté, etc.).
+
+L'historique des transactions (au tick précédent)
+own_trades (Dict[str, List[Trade]]) : Un dictionnaire répertoriant tous 
+les ordres que tu as réussi à exécuter lors de l'itération (le tick) précédente. 
+Très utile pour vérifier si tes ordres sont bien passés et à quel prix exact.
+
+market_trades (Dict[str, List[Trade]]) : Un dictionnaire répertoriant toutes 
+les transactions publiques réalisées par les autres bots/participants lors de 
+l'itération précédente. C'est essentiel si tu veux calculer des indicateurs basés 
+sur les volumes réels échangés, comme le prix moyen pondéré par les volumes (VWAP).
+
+Ton statut personnel
+position (Dict[str, int]) : Ton inventaire actuel. Un dictionnaire qui associe chaque 
+produit à la quantité que tu possèdes (ex: {"TOMATOES": 10, "EMERALDS": -5}). 
+C'est ici que tu vérifies que tu ne dépasses pas les limites de position (Position Limits).
+
+traderData (str) : Ta mémoire d'une itération à l'autre. 
+C'est la chaîne de caractères (généralement du texte au format JSON) que tu as renvoyée 
+à la fin de l'exécution précédente de ton code. C'est le seul moyen de conserver un historique 
+de tes calculs.
+
+Les données temporelles et externes
+timestamp (int) : L'heure ou le marqueur de temps actuel dans la simulation 
+(souvent exprimé en millisecondes ou en "ticks"). Utile pour suivre l'écoulement du temps.
+
+observations (Observation) : Ce sont des signaux externes ou des données spécifiques ajoutées 
+par le jeu. Dans les éditions précédentes de Prosperity, cela incluait par exemple le niveau 
+d'ensoleillement ou l'humidité, qui influençaient le prix futur de certains produits agricoles. C'est une information vitale à parser lorsqu'elle est disponible.

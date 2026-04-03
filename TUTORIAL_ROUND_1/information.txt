@@ -1,0 +1,20 @@
+XIRECs = monnaie
+
+PHASE :
+
+Le concours dure 16 jours au total séparé en deux parties avec 4 jours de pause entre les deux 
+parties. Il faut faire un assez bon score pour passer à la deuxième phase.
+La première phase contient le round 1 et 2, le round 2 rajoute des données par rapport au round 1,
+
+
+
+
+OBJECTIF :
+
+Obtrenir 200 000 XIRECs à l'issue de la première phase pour passer à la suivante.
+Il faut obtenir une stratégie qui donne 200 000 XIRECs à l'issue du round 2, c'est à dire à la 
+fin de la phase 1, pour pouvoir au round 3 et 4 de la phase 2.(Notre objectif à nous ce serait déjà
+grave bien).
+
+
+
