@@ -145,3 +145,40 @@ très rarement du Machine Learning complexe. Elles s'appuient sur des modèles s
 beaucoup plus légers, de l'arbitrage pur, et surtout, d'excellentes stratégies de Market Making
  (fournir de la liquidité en gérant intelligemment l'écart entre le prix d'achat et de vente 
  en fonction de l'inventaire).
+
+
+
+
+ ORDRE : 
+
+ À chaque fois que tu voudras acheter ou vendre via ta méthode run(), 
+ tu seras obligé de préciser le prix exact auquel tu es prêt à faire la transaction,
+  en plus de la quantité. Le système n'accepte pas les ordres au marché.
+  "In Prosperity, we focus on limit orders sent to Prosperity’s own exchange."
+  il n'y a pas de transaction sans une contrepartie qui est d'accord sur le prix et la quantité.
+
+Cependant, "attendre" ne veut pas toujours dire que ça prend du temps. En réalité, tout dépend du prix que tu décides d'envoyer dans ton ordre à cours limité (limit order).
+
+Tu vas faire face à deux scénarios très différents :
+
+Scénario 1 : L'exécution immédiate (Tu es "Taker")
+Avant d'envoyer ton ordre, ton algorithme va lire le carnet d'ordres (state.order_depths).
+Imaginons que tu voies qu'il y a une proposition de vente de 5 tomates à 10 XIRECs.
+Si tu envoies un ordre d'achat de 5 tomates avec un prix limite de 10 XIRECs, la rencontre est
+déjà faite ! Le système voit que les prix correspondent parfaitement. La transaction est immédiate.
+
+Scénario 2 : L'attente (Tu es "Maker")
+Tu regardes le même carnet d'ordres, le vendeur le moins cher propose toujours ses tomates à 
+10 XIRECs. Ton algorithme a calculé que c'était trop cher. 
+Tu envoies donc un ordre d'achat à 9 XIRECs. Puisque personne ne veut te les vendre à ce prix-là 
+à l'instant T, ton ordre est placé dans la file d'attente du marché 
+(il devient visible pour les autres).
+Là, effectivement, tu dois attendre. Ton ordre restera bloqué jusqu'à ce qu'un vendeur 
+(un autre bot du jeu) décide de baisser son prix et accepte de te les vendre à 9 XIRECs. 
+On dit que tu "apportes de la liquidité" au marché.
+
+Tout l'art du trading algorithmique dans Prosperity repose sur ce choix permanent :
+
+Dois-je payer un peu plus cher pour avoir mes tomates tout de suite ?
+Ou dois-je proposer un prix plus bas et prendre le risque d'attendre  ?
+
