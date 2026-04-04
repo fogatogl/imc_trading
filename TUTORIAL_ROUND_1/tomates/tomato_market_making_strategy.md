@@ -48,10 +48,10 @@ AR_COEFS = [-0.549, -0.317, -0.174, -0.093, -0.043]
 # Quoting
 HALF_SPREAD   = 4.5    # points — half the quoted bid-ask width
 SKEW_PER_UNIT = 0.2    # points of quote shift per unit of net inventory
-MAX_POSITION  = 20     # hard inventory limit in either direction
+MAX_POSITION  = 80     # hard inventory limit in either direction
 
 # Order sizing
-ORDER_SIZE = 5         # units per quote (tune to book depth at L1)
+ORDER_SIZE = 10         # units per quote (tune to book depth at L1)
 
 # Signal staleness — cancel resting orders if mid has moved more than this
 REQUOTE_THRESHOLD = 2.0   # points
