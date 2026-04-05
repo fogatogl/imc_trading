@@ -63,7 +63,7 @@ def ensure_backtester() -> None:
 
 def build_env() -> dict:
     env = os.environ.copy()
-    bt_pkg = str(BT_DIR / "prosperity4bt")
+    bt_pkg = str(BT_DIR)
     existing = env.get("PYTHONPATH", "")
     env["PYTHONPATH"] = bt_pkg + (os.pathsep + existing if existing else "")
     return env
@@ -105,11 +105,42 @@ def parse_log(log_path: str) -> dict:
     sandbox_lines: list[str] = []
 
     with open(log_path, encoding="utf-8", errors="replace") as fh:
-        section = None
-        header: list[str] = []
+        content = fh.read()
 
-        for raw_line in fh:
-            line = raw_line.rstrip("\n")
+    try:
+        data = json.loads(content)
+        activities = data.get("activitiesLog", "").splitlines()
+        if data.get("sandboxLog"):
+            sandbox_lines = data.get("sandboxLog", "").splitlines()
+        elif data.get("sandboxLogs"): # just in case
+            sandbox_lines = data.get("sandboxLogs", "").splitlines()
+            
+        header = []
+        for line in activities:
+            if not line.strip(): continue
+            # handle case where first line could be 'Activities log:' if it sneaks in
+            if line.strip() == "Activities log:": continue
+            parts = [p.strip() for p in line.split(";")]
+            if len(parts) < 3: continue
+            if not header or "day" not in header:
+                header = parts
+                continue
+            row_raw = dict(zip(header, parts))
+            row: dict = {
+                "day":       int(_safe_float(row_raw.get("day", "0"))),
+                "timestamp": int(_safe_float(row_raw.get("timestamp", "0"))),
+                "product":   row_raw.get("product", "UNKNOWN").strip(),
+                "mid_price": _safe_float(row_raw.get("mid_price", "0")),
+                "pnl":       _safe_float(row_raw.get("profit_and_loss", "0")),
+            }
+            rows.append(row)
+            
+    except json.JSONDecodeError:
+        section = None
+        header = []
+
+        for line in content.splitlines():
+            line = line.rstrip("\n")
 
             # ── section detection ──────────────────────────────────────────
             if line.strip() == "Activities log:":
@@ -156,7 +187,6 @@ def parse_log(log_path: str) -> dict:
         "days":     days,
         "sandbox":  "\n".join(sandbox_lines),
     }
-
 
 def latest_log(directory: str) -> str | None:
     logs = glob.glob(os.path.join(directory, "*.log"))
