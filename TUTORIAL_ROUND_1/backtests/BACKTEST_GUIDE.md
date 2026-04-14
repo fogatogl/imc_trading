@@ -17,7 +17,7 @@ pip install git+https://github.com/kevin-fu1/imc-prosperity-4-backtester.git
 ```powershell
 # Make sure NO venv is active (run `deactivate` if needed)
 cd C:\Users\fogat\Desktop\imc_trading\imc_trading\TUTORIAL_ROUND_1
-python backtest_visualize.py tomates\subtom.py --round 0 --open
+python backtest_visualize.py tomates\mmstrat.py --round 0 --open
 ```
 
 This generates `backtest_report.html` and opens it in your browser.
@@ -67,7 +67,7 @@ npm run dev
 cd C:\Users\fogat\Desktop\imc_trading\imc_trading\imc-prosperity-4\backtester
 & .venv\Scripts\Activate.ps1   # (.venv) appears in your prompt
 cd ..
-prosperity4mcbt ..\TUTORIAL_ROUND_1\tomates\subtom.py --quick --vis --out tmp\subtom\dashboard.json
+prosperity4mcbt ..\TUTORIAL_ROUND_1\tomates\mmstrat.py --quick --vis --out tmp\mmstrat\dashboard.json
 ```
 
 Dashboard opens automatically at `http://localhost:5173`.
