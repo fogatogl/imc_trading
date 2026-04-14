@@ -114,68 +114,79 @@ Expected clearing: 29. Profit = 9,999 × (30 − 29) = **9,999 XIRECs**.
 
 ### Clearing price without your order
 
-Cumulative asks ≤ P: 12k / 37k / 72k / 78k / 83k / 83k / 93k / 105k at prices 12–19.
+Cumulative asks ≤ P: 20k / 45k / 80k / 86k / 91k / 91k / 101k / 113k at prices 12–19.
 
 | Price | Bids ≥ P | Asks ≤ P | Volume |
 |-------|----------|----------|--------|
-| 12    | 103k     | 12k      | 12k    |
-| 13    | 103k     | 37k      | 37k    |
-| 14    | 96k      | 72k      | 72k    |
-| 15    | 86k      | 78k      | 78k    |
-| **16**| **81k**  | **83k**  | **81k** ← max |
-| 17    | 71k      | 83k      | 71k    |
-| 18    | 66k      | 93k      | 66k    |
-| 19    | 60k      | 105k     | 60k    |
+| 12    | 103k     | 20k      | 20k    |
+| 13    | 103k     | 45k      | 45k    |
+| 14    | 96k      | 80k      | 80k    |
+| **15**| **86k**  | **86k**  | **86k** ← max |
+| 16    | 81k      | 91k      | 81k    |
+| 17    | 71k      | 91k      | 71k    |
+| 18    | 66k      | 101k     | 66k    |
+| 19    | 60k      | 113k     | 60k    |
 
-Baseline clearing = **16** (max volume 81k, unique).
+Baseline clearing = **15** (max volume 86k, unique — demand equals supply exactly).
 
 ### Profit per unit by clearing price
 
 | Clearing | Buyback − clearing − fee | Profitable? |
 |----------|--------------------------|-------------|
+| 15 | 20 − 15 − 0.10 = **4.90** | ✓ |
 | 16 | 20 − 16 − 0.10 = **3.90** | ✓ |
 | 17 | 20 − 17 − 0.10 = **2.90** | ✓ |
 | 18 | 20 − 18 − 0.10 = **1.90** | ✓ |
 | 19 | 20 − 19 − 0.10 = **0.90** | ✓ |
 | 20 | 20 − 20 − 0.10 = **−0.10** | ✗ loss |
 
-### Strategy: push clearing to 18 for maximum volume × margin
+### Strategy: push clearing to 16 for maximum volume × margin
 
-Your bid at price 20 gets inserted behind the existing 43k@20 (time priority) but ahead of all @19 and @18 bids (price priority). Adding volume V@20 raises the bid-side totals and shifts the maximum-volume price upward.
+Baseline clearing is 15 — vol@15 = 86k because demand (86k) equals supply (86k) exactly. Adding any bid V@20 inflates bids≥P for all P ≤ 20, but vol@15 stays capped at 86k (supply side fixed). Meanwhile vol@16 grows, overtaking vol@15 and making 16 the new clearing price.
 
 Volume table with V added @20:
 
-| Price | Bids ≥ P (with V@20) | Asks ≤ P | Vol | Condition |
-|-------|----------------------|----------|-----|-----------|
-| 16    | 81k+V               | 83k      | min(81k+V, 83k) | capped at 83k for V≥2k |
-| 17    | 71k+V               | 83k      | min(71k+V, 83k) | capped at 83k for V≥12k |
-| **18**| **66k+V**           | **93k**  | min(66k+V, 93k) | **capped at 93k for V≥27k** |
-| 19    | 60k+V               | 105k     | min(60k+V, 105k) | capped for V≥45k |
+| Price | Bids ≥ P (with V@20) | Asks ≤ P | Vol |
+|-------|----------------------|----------|-----|
+| 15    | 86k+V               | 86k      | **86k** (supply-capped, never grows) |
+| **16**| **81k+V**           | **91k**  | min(81k+V, 91k) |
+| 17    | 71k+V               | 91k      | min(71k+V, 91k) |
+| 18    | 66k+V               | 101k     | min(66k+V, 101k) |
+| 19    | 60k+V               | 113k     | min(60k+V, 113k) |
 
-For clearing to be 18 (vol@18 strictly > vol@19):
-- Need `min(66k+V, 93k) > min(60k+V, 105k)`
-- For V ≥ 27k: vol@18 = 93k. vol@19 = 60k+V. Requires 60k+V < 93k → **V < 33k**.
+For clearing to be 16 (vol@16 strictly > vol@15 = 86k AND vol@16 > vol@17):
+- vol@16 > 86k: 81k+V > 86k → **V ≥ 5k**
+- vol@16 > vol@17: min(81k+V, 91k) > min(71k+V, 91k). Both cap at 91k for V ≥ 10k → tie → clearing = 17. So **V < 20k**.
 
-**Optimal V**: maximise fills while keeping V < 33k.
+Clearing = 16 for **5k ≤ V < 20k**.
 
-At V = **32,999** @20, clearing = 18:
-- Supply ≤ 18 = 93k. Demand ≥ 18 = 43k + 32,999 + 17k + 6k = 98,999 > 93k (supply-constrained).
-- Fill order: 43k existing@20 → **32,999 mine@20** → 17k existing@19 → 6k existing@18.
-  - After 43k: 50k left → all 32,999 fill → 17,001 left → 17k@19 fill → 1 left → 1 unit @18.
-- I get **32,999 fills at clearing price 18**. ✓
+At V = **19,999** @20, clearing = 16:
+- Supply ≤ 16 = 91k. Demand ≥ 16 = 81k+19,999 = 100,999 > 91k (supply-constrained).
+- Fill order: 43k existing@20 → **19,999 mine@20** → 17k@19 → 6k@18 → 5k@17 → 1k@16.
+  - After 43k: 48k left → all 19,999 fill ✓.
 
-Verification that clearing = 18:
-- vol@18 = min(98,999, 93,000) = **93,000**
-- vol@19 = min(92,999, 105,000) = **92,999**
-- 93,000 > 92,999 → clearing = 18 ✓
+Verification:
+- vol@16 = min(100,999, 91,000) = **91,000**
+- vol@15 = 86,000 < 91,000 ✓
+- vol@17 = min(90,999, 91,000) = **90,999** < 91,000 ✓ — unique max → clearing = 16 ✓
 
-At V = 33,000: vol@18 = vol@19 = 93,000 → tie → clearing = 19 → profit drops to 33,000 × 0.90 = 29,700. Do not cross this threshold.
+At V = 20,000: vol@16 = vol@17 = 91,000 → tie → clearing = 17 → profit drops to 20,000 × 2.90 = 58,000. Do not cross this threshold.
+
+Full comparison across all target clearings:
+
+| Target clearing | V range | Max V | Profit/unit | Total |
+|----------------|---------|-------|-------------|-------|
+| 15 | V < 5k | 4,999 | 4.90 | 24,495 |
+| **16** | 5k ≤ V < 20k | **19,999** | **3.90** | **77,996 ← optimal** |
+| 17 | 20k ≤ V < 25k | 24,999 | 2.90 | 72,497 |
+| 18 | 25k ≤ V < 41k | 40,999 | 1.90 | 77,898 |
+| 19 | 41k ≤ V < 70k | 69,999 | 0.90 | 62,999 |
 
 ### Optimal order — Ember Mushroom
 
-> **BUY 32,999 units at price 20**
+> **BUY 19,999 units at price 20**
 
-Expected clearing: 18. Profit = 32,999 × (20 − 18 − 0.10) = 32,999 × 1.90 = **62,698 XIRECs**.
+Expected clearing: 16. Profit = 19,999 × (20 − 16 − 0.10) = 19,999 × 3.90 = **77,996 XIRECs**.
 
 ---
 
@@ -184,17 +195,17 @@ Expected clearing: 18. Profit = 32,999 × (20 − 18 − 0.10) = 32,999 × 1.90 
 | Product | Order | Clearing | Fills | Profit |
 |---------|-------|----------|-------|--------|
 | Dryland Flax | BUY 9,999 @ 30 | 29 | 9,999 | 9,999 XIRECs |
-| Ember Mushroom | BUY 32,999 @ 20 | 18 | 32,999 | 62,698 XIRECs |
-| **Total** | | | | **~72,697 XIRECs** |
+| Ember Mushroom | BUY 19,999 @ 20 | 16 | 19,999 | 77,996 XIRECs |
+| **Total** | | | | **~87,995 XIRECs** |
 
 ---
 
 ## Risk notes
 
 - These order books are **stale**. The clearing price depends on your exact order plus whatever the live book looks like at submission time. The analysis above assumes no book changes.
-- The critical thresholds are **V < 10k for DRYLAND_FLAX** (else clearing jumps to 30, zero profit) and **V < 33k for EMBER_MUSHROOM** (else clearing jumps to 19, profit collapses to 0.90/unit).
+- The critical thresholds are **V < 10k for DRYLAND_FLAX** (else clearing jumps to 30, zero profit) and **V < 20k for EMBER_MUSHROOM** (else clearing jumps to 17, profit collapses to 2.90/unit and total drops to ~72k).
 - You can re-submit orders until the round ends. Watch for updated book snapshots and recalculate if the book changes significantly.
-- EMBER_MUSHROOM: if the existing 43k@20 bids are NOT fully present at auction time, your priority improves but the clearing price analysis may shift. Re-verify vol@18 vs vol@19 with the live book.
+- EMBER_MUSHROOM: if the existing 43k@20 bids are NOT fully present at auction time, your priority improves but the clearing price analysis may shift. Re-verify vol@16 vs vol@17 with the live book. Also re-verify vol@15 (supply = asks ≤ 15); if it changes, the baseline clearing shifts.
 
 
 Auctions are exciting, aren't they? A rare moment where everything pauses, everyone commits, and the outcome waits patiently for the final input. I have always liked that about them. They reward preparation, not speed.
