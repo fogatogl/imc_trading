@@ -1,0 +1,39 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude remote-control --name imc-project",
+            "async": true,
+            "statusMessage": "Starting remote-control session..."
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c ':*)",
+      "Bash(.venv/Scripts/python.exe -c ':*)",
+      "Bash(timeout 12 ../.venv/Scripts/python.exe app.py)",
+      "Bash(../.venv/Scripts/python.exe -c ':*)",
+      "Bash(.venv/Scripts/python.exe dashboard/app.py)",
+      "Bash(curl -s http://localhost:8051/_dash-dependencies)",
+      "Bash(tree -L 2 -d /c/Users/fogat/Desktop/imc_trading/imc_trading --ignore=\".*\" -I \"__pycache__|.venv|__pycache__\")",
+      "Bash(python -m prosperity4bt \"TUTORIAL_ROUND_1/tomates/mmstrat.py\" 0 --no-vis --no-out)",
+      "Bash(python -m prosperity4bt --help)",
+      "Bash(python imc-prosperity-4-backtester/prosperity4bt/__main__.py --help)",
+      "Bash(c:/Users/fogat/Desktop/imc_trading/.venv/Scripts/pip.exe install:*)",
+      "Bash(python -m prosperity4bt \"../TUTORIAL_ROUND_1/tomates/mmstrat.py\" 0 --no-vis --no-progress)",
+      "Bash(python -m prosperity4bt \"../trader.py\" 0 --no-vis --no-progress)",
+      "Bash(PYTHONPATH=\"$\\(pwd\\)/prosperity4bt\" python -m prosperity4bt \"../trader.py\" 0 --no-vis --no-progress)",
+      "Bash(PYTHONPATH=\"$\\(pwd\\)/prosperity4bt\" python -m prosperity4bt \"../TUTORIAL_ROUND_1/tomates/mmstrat.py\" 0 --no-vis --no-progress)",
+      "Bash(python3 add_ob_cells.py)",
+      "Bash(python3)",
+      "Read(//c/Users/fogat/Desktop/**)",
+      "Bash(python3 enrich_markdown.py)"
+    ]
+  }
+}

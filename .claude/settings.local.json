@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find \"c:\\\\Users\\\\fogat\\\\Desktop\\\\imc_trading\" -name \"*.csv\" -type f -exec ls -lh {} \\\\;)",
+      "Read(//c/Users/fogat/Desktop/imc_trading/**)",
+      "Bash(ls -lh \"c:\\\\Users\\\\fogat\\\\Desktop\\\\imc_trading\"/*.ipynb)",
+      "Bash(xargs ls:*)",
+      "Bash(ls -lh \"c:\\\\Users\\\\fogat\\\\Desktop\\\\imc_trading\"/*.py)",
+      "Bash(python3 -c \"import pandas as pd; df = pd.read_csv\\('c:/Users/fogat/Desktop/imc_trading/imc-prosperity-3-backtester/prosperity3bt/resources/round2/prices_round_2_day_-1.csv', sep=';', nrows=5\\); print\\(df['product'].unique\\(\\)\\)\")",
+      "Bash(python3 -c \"import pandas as pd; df = pd.read_csv\\('c:/Users/fogat/Desktop/imc_trading/imc-prosperity-3-backtester/prosperity3bt/resources/round2/trades_round_2_day_-1.csv', sep=';', nrows=20\\); print\\(df[['buyer','seller','symbol']].head\\(20\\)\\)\")",
+      "Bash(python3 -c ':*)",
+      "Bash(head -3 \"c:/Users/fogat/Desktop/imc_trading/imc_trading/imc-prosperity-4-backtester/prosperity4bt/resources/round0/\"*.csv)",
+      "Bash(head -3 \"c:/Users/fogat/Desktop/imc_trading/imc_trading/imc-prosperity-4/data/round0/\"*.csv)",
+      "Bash(python3 -c \"import dash; print\\('dash', dash.__version__\\)\")",
+      "Bash(python3 -c \"import plotly; print\\('plotly', plotly.__version__\\)\")",
+      "Bash(python3 -c \"import numpy; print\\('numpy ok'\\)\")",
+      "Bash(.venv/Scripts/python -c \"import sys; print\\(sys.version\\)\")",
+      "Bash(.venv/Scripts/python.exe -c \"import sys; print\\(sys.version\\)\")",
+      "Bash(.venv/Scripts/python.exe -c \"import dash, plotly, numpy, pandas; print\\('dash', dash.__version__\\)\")",
+      "Bash(.venv/Scripts/pip.exe install:*)",
+      "Bash(timeout 8 .venv/Scripts/python.exe dashboard/app.py)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(curl -s https://raw.githubusercontent.com/jmerle/imc-prosperity-3-visualizer/master/src/utils/algorithm.tsx)",
+      "Bash(curl -s https://raw.githubusercontent.com/jmerle/imc-prosperity-3-visualizer/master/src/pages/visualizer/Chart.tsx)",
+      "Bash(curl -s https://raw.githubusercontent.com/jmerle/imc-prosperity-3-visualizer/master/src/models.ts)",
+      "Bash(timeout 10 .venv/Scripts/python.exe dashboard/app.py)",
+      "Bash(timeout 12 .venv/Scripts/python.exe dashboard/app.py)",
+      "Bash(cat \"c:/Users/fogat/Desktop/imc_trading/imc_trading/TUTORIAL_ROUND_1/backtests/\"*.log)",
+      "Bash(python3 -c \" import sys, json data = json.load\\(sys.stdin\\) print\\('Keys:', list\\(data.keys\\(\\)\\)\\) print\\('activitiesLog sample:', data.get\\('activitiesLog',''\\)[:300]\\) print\\('logs[0]:', data.get\\('logs',[]\\)[0] if data.get\\('logs'\\) else 'none'\\) print\\('tradeHistory[0]:', data.get\\('tradeHistory',[]\\)[0] if data.get\\('tradeHistory'\\) else 'none'\\) \")"
+    ]
+  }
+}
