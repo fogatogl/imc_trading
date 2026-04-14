@@ -1,0 +1,49 @@
+# OS/editor noise
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Secrets and local config
+.env
+.env.*
+!.env.example
+.prosperity_token
+.prosperity_refresh
+
+# Build/artifacts
+build/
+dist/
+*.egg-info/
+*.log
+tmp/
+target/
+
+# Agent/tooling workdirs
+.claude/
+
+# Local mirror folders copied into this repo (keep ignored unless intentionally imported)
+Ctrl-Alt-DefeatTheMarket/
+imc_trading/
