@@ -32,6 +32,7 @@ ENV/
 !.env.example
 .prosperity_token
 .prosperity_refresh
+.gitignore
 
 # Build/artifacts
 build/
@@ -40,10 +41,14 @@ dist/
 *.log
 tmp/
 target/
+backtests/
+ablations/
 
 # Agent/tooling workdirs
 .claude/
 
+
 # Local mirror folders copied into this repo (keep ignored unless intentionally imported)
 Ctrl-Alt-DefeatTheMarket/
 imc_trading/
+Ctrl-Alt-DefeatTheMarket
