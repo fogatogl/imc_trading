@@ -76,12 +76,28 @@ Instead:
 | Round | Products | Submitted strategy | Research doc |
 |-------|----------|--------------------|--------------|
 | 1 | ASH_COATED_OSMIUM, INTARIAN_PEPPER_ROOT | `round1/trader_ash6_fix_doublefire.py` (ASH) + `round1/2800ash_final.py` (PEPPER) | [`round1/ROUND1_STRATEGY.md`](round1/ROUND1_STRATEGY.md) |
+| 2 | (TBD — research in progress) | — | — |
+| 3 | HYDROGEL_PACK, VELVETFRUIT_EXTRACT, VEV_{4000..6500} (10 vouchers) | — (research in progress) | [`round3/round3_analysis.ipynb`](round3/round3_analysis.ipynb) |
 
 ---
 
-## Round 2 Strategy (Current)
+## Round 3 Strategy (Current) — "Gloves Off"
 
-*(To be filled in as research progresses.)*
+**Products:**
+- `HYDROGEL_PACK` — delta-1, position limit **200**
+- `VELVETFRUIT_EXTRACT` (VE) — delta-1 underlying, position limit **200**
+- `VELVETFRUIT_EXTRACT_VOUCHER` (VEV) — 10 European call options on VE, position limit **300 each**
+  - Strikes: `VEV_4000`, `VEV_4500`, `VEV_5000`, `VEV_5100`, `VEV_5200`, `VEV_5300`, `VEV_5400`, `VEV_5500`, `VEV_6000`, `VEV_6500`
+  - 7-day expiry starting Round 1. Round 3 start TTE = **5 days** (live).
+  - Historical data TTE mapping: day 0 → 8d, day 1 → 7d, day 2 → 6d.
+
+**Data:** `dataset/ROUND_3/prices_round_3_day_{0,1,2}.csv`, `trades_round_3_day_{0,1,2}.csv`.
+
+**Reference prior-year strategy:** [`round3_old_strategy.md`](round3_old_strategy.md) — IV scalping via vol-smile fit + detrended IV deviations, Black-Scholes price deviation signals, underlying mean reversion (EMA) as hedge.
+
+**Research entrypoint:** [`round3/round3_analysis.ipynb`](round3/round3_analysis.ipynb) — replicates last-year plots (vol smile, IV deviations, BS price deviations, underlying autocorrelation) on this year's VE/VEV data.
+
+**Manual trade:** Ornamental Bio-Pods. Reserve prices uniform on `[670, 920]` in steps of 5, sell-out at 920. Two bids. Second-bid penalty `((920 - avg_b2) / (920 - b2))^3` when `b2 < avg_b2`. See `round3/manual_bidding.md` (to be written).
 
 ---
 
