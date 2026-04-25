@@ -43,8 +43,134 @@ Why these two scalp strikes?
     so it's pure directional exposure with no spread capture. Dropped.
   - VEV_5400/5500 have spread mode = 1, can't post inside at all.
 """
-from prosperity4bt.datamodel import TradingState, Order, Symbol
 import json
+from typing import Any
+
+try:
+    from datamodel import Listing, Observation, Order, OrderDepth, ProsperityEncoder, Symbol, Trade, TradingState
+except ImportError:
+    from prosperity4bt.datamodel import Listing, Observation, Order, OrderDepth, ProsperityEncoder, Symbol, Trade, TradingState
+
+
+class Logger:
+    def __init__(self) -> None:
+        self.logs = ""
+        self.max_log_length = 3750
+
+    def print(self, *objects: Any, sep: str = " ", end: str = "\n") -> None:
+        self.logs += sep.join(map(str, objects)) + end
+
+    def flush(self, state: TradingState, orders: dict[Symbol, list[Order]], conversions: int, trader_data: str) -> None:
+        base_length = len(
+            self.to_json(
+                [
+                    self.compress_state(state, ""),
+                    self.compress_orders(orders),
+                    conversions,
+                    "",
+                    "",
+                ]
+            )
+        )
+
+        max_item_length = (self.max_log_length - base_length) // 3
+
+        print(
+            self.to_json(
+                [
+                    self.compress_state(state, self.truncate(state.traderData, max_item_length)),
+                    self.compress_orders(orders),
+                    conversions,
+                    self.truncate(trader_data, max_item_length),
+                    self.truncate(self.logs, max_item_length),
+                ]
+            )
+        )
+
+        self.logs = ""
+
+    def compress_state(self, state: TradingState, trader_data: str) -> list[Any]:
+        return [
+            state.timestamp,
+            trader_data,
+            self.compress_listings(state.listings),
+            self.compress_order_depths(state.order_depths),
+            self.compress_trades(state.own_trades),
+            self.compress_trades(state.market_trades),
+            state.position,
+            self.compress_observations(state.observations),
+        ]
+
+    def compress_listings(self, listings: dict[Symbol, Listing]) -> list[list[Any]]:
+        compressed = []
+        for listing in listings.values():
+            compressed.append([listing.symbol, listing.product, listing.denomination])
+        return compressed
+
+    def compress_order_depths(self, order_depths: dict[Symbol, OrderDepth]) -> dict[Symbol, list[Any]]:
+        compressed = {}
+        for symbol, order_depth in order_depths.items():
+            compressed[symbol] = [order_depth.buy_orders, order_depth.sell_orders]
+        return compressed
+
+    def compress_trades(self, trades: dict[Symbol, list[Trade]]) -> list[list[Any]]:
+        compressed = []
+        for arr in trades.values():
+            for trade in arr:
+                compressed.append(
+                    [
+                        trade.symbol,
+                        trade.price,
+                        trade.quantity,
+                        trade.buyer,
+                        trade.seller,
+                        trade.timestamp,
+                    ]
+                )
+        return compressed
+
+    def compress_observations(self, observations: Observation) -> list[Any]:
+        conversion_observations = {}
+        for product, observation in observations.conversionObservations.items():
+            conversion_observations[product] = [
+                observation.bidPrice,
+                observation.askPrice,
+                observation.transportFees,
+                observation.exportTariff,
+                observation.importTariff,
+                observation.sugarPrice,
+                observation.sunlightIndex,
+            ]
+        return [observations.plainValueObservations, conversion_observations]
+
+    def compress_orders(self, orders: dict[Symbol, list[Order]]) -> list[list[Any]]:
+        compressed = []
+        for arr in orders.values():
+            for order in arr:
+                compressed.append([order.symbol, order.price, order.quantity])
+        return compressed
+
+    def to_json(self, value: Any) -> str:
+        return json.dumps(value, cls=ProsperityEncoder, separators=(",", ":"))
+
+    def truncate(self, value: str, max_length: int) -> str:
+        lo, hi = 0, min(len(value), max_length)
+        out = ""
+        while lo <= hi:
+            mid = (lo + hi) // 2
+            candidate = value[:mid]
+            if len(candidate) < len(value):
+                candidate += "..."
+            encoded_candidate = json.dumps(candidate)
+            if len(encoded_candidate) <= max_length:
+                out = candidate
+                lo = mid + 1
+            else:
+                hi = mid - 1
+        return out
+
+
+logger = Logger()
 
 
 class Trader:
@@ -65,23 +191,24 @@ class Trader:
     OF_EXTREME = 5.0
     SKEW_SHRINK = 0.3
 
-    def run(self, state: TradingState):
-        orders: dict = {}
+    def run(self, state: TradingState) -> tuple[dict[Symbol, list[Order]], int, str]:
+        result: dict[Symbol, list[Order]] = {}
+        conversions = 0
         try:
             mem = json.loads(state.traderData) if state.traderData else {}
         except Exception:
             mem = {}
         for sym in self.SCALP_SYMS:
-            orders[sym] = self._scalp(state, sym)
+            result[sym] = self._scalp(state, sym)
         for sym in self.MM_SYMS:
-            orders[sym] = self._v7(state, sym, mem)
+            result[sym] = self._v7(state, sym, mem)
         try:
-            tdata = json.dumps(mem)
+            trader_data = json.dumps(mem)
         except Exception:
-            tdata = ""
-        return orders, 0, tdata
+            trader_data = ""
+        logger.flush(state, result, conversions, trader_data)
+        return result, conversions, trader_data
 
-    # ---- long-only accumulation toward +300 ----
     def _scalp(self, state, sym):
         if sym not in state.order_depths:
             return []
@@ -97,12 +224,10 @@ class Trader:
         if best_ask - best_bid >= 2:
             size = min(self.SCALP_PASSIVE_SIZE, room)
             return [Order(sym, int(best_bid + 1), int(size))] if size > 0 else []
-        # spread = 1: can't post inside, cross the ask
         ask_vol = abs(od.sell_orders[best_ask])
         take = min(room, self.SCALP_TAKE_SIZE, ask_vol)
         return [Order(sym, int(best_ask), int(take))] if take > 0 else []
 
-    # ---- two-sided v7 MM ----
     def _v7(self, state, sym, mem):
         if sym not in state.order_depths:
             return []

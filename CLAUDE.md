@@ -42,6 +42,25 @@ $env:PYTHONPATH="imc_trading/imc-prosperity-4-backtester"; .venv/Scripts/python.
 
 Omit `--no-vis` so the backtester opens the external visualizer automatically with the log pre-loaded.
 
+**Visualizer log format (kevin-fu1 visualizer):**
+The kevin-fu1 visualizer (`https://kevin-fu1.github.io/imc-prosperity-4-visualizer/`) requires per-tick `lambdaLog` output embedded in the log JSON. The backtester only emits this when the trader itself prints a compressed-state JSON line to stdout each tick. Traders MUST include the standard `Logger` class and call `logger.flush(state, orders, conversions, trader_data)` at the end of `run()`. Without this, the visualizer renders only the activities CSV (PnL chart) and order-book / depth / trades panels stay empty.
+
+Logger contract:
+- Single global `logger = Logger()` instance.
+- `logger.flush(...)` is the **last** call before `return result, conversions, trader_data` in `run()`.
+- Custom debug output via `logger.print(...)` (NOT `print()`) — the global stdout `print` is reserved for the compressed-state line.
+- Truncates `state.traderData`, returned `trader_data`, and accumulated `logger.logs` to fit within `max_log_length = 3750` chars combined.
+
+Reference template: see the docstring/header of `round3/trader_merged_v4.py`. Copy the Logger class verbatim — do not modify it.
+
+Import shim for backtester vs sandbox compatibility:
+```python
+try:
+    from datamodel import Listing, Observation, Order, OrderDepth, ProsperityEncoder, Symbol, Trade, TradingState
+except ImportError:
+    from prosperity4bt.datamodel import Listing, Observation, Order, OrderDepth, ProsperityEncoder, Symbol, Trade, TradingState
+```
+
 **Fill model — `worse` mode (default):**
 An order is filled against a historical market trade only when the market trade price is *strictly worse* than your quote (strictly below your bid, or strictly above your ask).
 
