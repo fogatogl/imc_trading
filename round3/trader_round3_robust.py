@@ -1,13 +1,20 @@
 """
-Round 3 Trader - ROBUST variant (scenario J).
+Round 3 Trader - ROBUST variant + hydrogel mean-rev overlay (v8).
 
-Backtest PnL: +43,860 over 3 days (round 3, server_like fill mode).
-  HYDROGEL_PACK v7 MM      : +26,173   (57%)
-  VELVETFRUIT_EXTRACT v7 MM:  +6,228   (14%)
-  VEV_4000 v7 MM           :  +8,810   (20%)   (21-tick spread goldmine)
-  VEV_5100 v7 MM           :      +0   ( 0%)   (no counterparty flow)
-  VEV_5200 v7 MM           :  +1,314   ( 3%)
-  VEV_5300 v7 MM           :  +1,335   ( 3%)
+Backtest PnL on HYDROGEL alone:
+  v7:  +26,173 / 3 days
+  v8:  +53,083 / 3 days  (mean-rev inventory target, K_FV=3, CAP=150)
+See round3/hydrogel_findings_and_plan.md for the supporting analysis and
+backtester-validated parameter sweep.
+
+Other products are unchanged - the alpha is hydrogel-specific (mid mean-
+reverts to 10000 with corr=-0.70 at 2000 ticks). Approximate prior totals:
+  HYDROGEL_PACK v7 MM      : +26,173   ->  v8: +53,083
+  VELVETFRUIT_EXTRACT v7 MM:  +6,228
+  VEV_4000 v7 MM           :  +8,810   (21-tick spread goldmine)
+  VEV_5100 v7 MM           :      +0   (no counterparty flow)
+  VEV_5200 v7 MM           :  +1,314
+  VEV_5300 v7 MM           :  +1,335
 
 Why choose this variant
 -----------------------
@@ -58,6 +65,13 @@ class Trader:
     OF_EXTREME = 5.0
     SKEW_SHRINK = 0.3
 
+    # v8 hydrogel mean-reversion overlay (HYDROGEL_PACK only).
+    # target = clip(-K_FV * (mid - ANCHOR), -CAP, +CAP)
+    HG_ANCHOR = 10000
+    HG_K_FV = 3.0
+    HG_CAP = 150
+    HG_ANCHOR_BREAK_TOL = 200  # |mid-anchor| > this disables overlay
+
     def run(self, state: TradingState):
         orders: dict = {}
         try:
@@ -95,7 +109,15 @@ class Trader:
         mem[f"{sym}_pb"] = cur_bv
         mem[f"{sym}_pa"] = cur_av
 
-        inv_skew = round(-self.INV_MAX_SKEW * (pos / limit))
+        # Hydrogel-only mean-reversion target; other products keep target=0.
+        target = 0
+        if sym == "HYDROGEL_PACK":
+            mid = (best_bid + best_ask) / 2.0
+            if abs(mid - self.HG_ANCHOR) <= self.HG_ANCHOR_BREAK_TOL:
+                raw = -self.HG_K_FV * (mid - self.HG_ANCHOR)
+                target = max(-self.HG_CAP, min(self.HG_CAP, int(round(raw))))
+
+        inv_skew = round(-self.INV_MAX_SKEW * ((pos - target) / limit))
 
         orders = []
         if best_ask - best_bid >= 2:
