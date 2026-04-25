@@ -65,10 +65,11 @@ class Trader:
     OF_EXTREME = 5.0
     SKEW_SHRINK = 0.3
 
-    # v8 hydrogel mean-reversion overlay (HYDROGEL_PACK only).
+    # v9 hydrogel aggressive overlay (HYDROGEL_PACK only).
+    HG_INV_MAX_SKEW = 20
     HG_ANCHOR = 10000
-    HG_K_FV = 3.0
-    HG_CAP = 150
+    HG_K_FV = 6.0
+    HG_CAP = 200
     HG_ANCHOR_BREAK_TOL = 200
 
     def run(self, state: TradingState):
@@ -131,13 +132,15 @@ class Trader:
         mem[f"{sym}_pa"] = cur_av
 
         target = 0
+        skew_max = self.INV_MAX_SKEW
         if sym == "HYDROGEL_PACK":
             mid = (best_bid + best_ask) / 2.0
             if abs(mid - self.HG_ANCHOR) <= self.HG_ANCHOR_BREAK_TOL:
                 raw = -self.HG_K_FV * (mid - self.HG_ANCHOR)
                 target = max(-self.HG_CAP, min(self.HG_CAP, int(round(raw))))
+            skew_max = self.HG_INV_MAX_SKEW
 
-        inv_skew = round(-self.INV_MAX_SKEW * ((pos - target) / limit))
+        inv_skew = round(-skew_max * ((pos - target) / limit))
         orders = []
         if best_ask - best_bid >= 2:
             our_bid = best_bid + 1 + inv_skew

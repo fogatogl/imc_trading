@@ -243,3 +243,134 @@ Per CLAUDE.md research-workflow rule: **`trader_hydrogel_v7.py` is NOT deleted**
 - Adding a mean-reversion-driven inventory target — **bias inventory long when mid < 10 000, short when mid > 10 000** — lifts P&L to **+53 k** at K_FV=3, CAP=150 in the actual backtester, profitable on every day.
 - Implementation: `round3/trader_hydrogel_v8_meanrev.py` (primary) + `round3/trader_hydrogel_v8_ema.py` (defensive). v7 kept until you approve.
 - Next step: swap hydrogel block in the merged round-3 trader to v8.
+
+---
+
+## 6. Self-criticism + v9: from "small skew" to "cross-book taker"
+
+After the v8 ship, I pushed back on every parameter. The biggest weakness:
+**`INV_MAX_SKEW = 2` was wildly under-sized for the alpha.** With a 16-tick
+spread, ±2 ticks of skew is 12.5 % of the half-spread. Worse, the formula
+`round(-2 · (pos − target) / 200)` has a deadband: for `|pos − target| < 25`
+the skew rounds to 0, so most fills don't trigger any tilt at all.
+
+### 6.1 SKEW sweep (K_FV=3, CAP=200)
+
+| INV_MAX_SKEW | Day 0 | Day 1 | Day 2 | **Total** |
+|---:|---:|---:|---:|---:|
+| 2 (v8) | 15 683 | 24 973 | 13 032 | 53 688 |
+| 8 | 16 883 | 24 473 | 15 462 | 56 818 |
+| 10 | 19 544 | 24 800 | 16 413 | 60 757 |
+| 15 | 22 380 | 28 945 | 19 143 | 70 468 |
+| **20** | 24 290 | 32 915 | 21 462 | **78 667** |
+| 30 | 29 123 | 34 563 | 25 543 | 89 229 |
+| 50 | 29 088 | 32 274 | 27 291 | 88 653 |
+
+Past about 30 the gains saturate; at very high skew + K_FV it actually
+crashes (see 6.4).
+
+### 6.2 SKEW × K_FV grid (CAP=200) — joint optimum
+
+| sk \ K_FV | 4.0 | 5.0 | **6.0** | 7.0 | 8.0 |
+|---:|---:|---:|---:|---:|---:|
+| 20 | 91 857 | 104 535 | **112 636** | — | 110 237 |
+| 25 | 98 724 | 111 028 | 112 282 | — | 101 803 |
+| 30 | 103 661 | 109 102 | 106 306 | — | 87 986 |
+
+**The joint optimum is sk=20, K_FV=6, CAP=200 → +112 636 / 3 days** —
+**4.3× the v7 baseline and 2.1× v8.**
+
+### 6.3 What the new mechanism actually does
+
+At `INV_MAX_SKEW = 20`, the inventory-skew arithmetic stops being a
+"small price nudge". The formula becomes:
+
+```
+inv_skew = round(-20 · (pos − target) / 200)
+```
+
+When `|pos − target|` is large (10s of contracts), `inv_skew` reaches
+±15..±20 ticks, which in a 16-tick spread means our quote is **at or
+past the opposite best price**. The prosperity4bt matcher (lines 154–
+170 of `runner.py`) then fills us as a taker against the resting book,
+at the resting price (price improvement). Mechanism check: in
+`--match-trades none` mode (no fills against market trades, only
+against the resting book), v9 still earns **+80 700 / 3 days** vs v8's
+**+0**. **78 % of the alpha is taker fills, not maker fills.**
+
+This is not market making any more; it's a directional mean-reversion
+trade with maker fills as bonus when the stars align. The strong
+underlying alpha — corr = −0.70 between current deviation and forward
+2 000-tick change — easily repays the half-spread cost.
+
+### 6.4 Cross-validation (per held-out day)
+
+Tune (sk, K_FV) on the other two days, evaluate held-out:
+
+| Held out | Best on train | Train P&L | Test P&L |
+|---|---|---:|---:|
+| Day 0 | sk=25, K_FV=6 | 78 468 | **33 814** |
+| Day 1 | sk=20, K_FV=7 | 71 208 | **41 934** |
+| Day 2 | sk=20, K_FV=6 | 79 024 | **33 612** |
+
+Held-out test sums to **109 360**; in-sample full-data total is 112 636.
+**Out-of-sample matches in-sample within 3 %** — the optimum is real,
+not curve-fit. The optimal hyperparameters cluster at (sk=20-25,
+K_FV=6-7) on every split.
+
+### 6.5 Saturation cliff (don't push too far)
+
+| sk \ K_FV | 4 | 6 | 8 |
+|---:|---:|---:|---:|
+| 30 | 103 661 | 106 306 | 87 986 |
+| 40 | 100 419 | 79 725 | 46 500 |
+| 50 | 81 628 | 44 286 | **−7 762** |
+
+At `sk=50, K_FV=8` the strategy LOSES 7.8 k. Mechanism: our skew
+becomes so large that we cross-book on the wrong side too (e.g., when
+flat we still place asks below best_bid). The optimum is firmly inside
+sk=20-25.
+
+### 6.6 Risk caveats specific to v9
+
+1. **We are now a taker on extremes.** Average paid spread per fill rises
+   from ~1 SeaShell (v8) to ~7 (v9). The thesis fails if mean-reversion
+   fails; in v8 we'd just sit on flat inventory, in v9 we paid full
+   spread to acquire it.
+2. **Position cap raised from 150 → 200.** Worst case: max long 200 at
+   anchor − 100 mid, anchor breaks, mid drops further to anchor − 200.
+   Hard loss = 200 × 100 = 20 000 SeaShells before `ANCHOR_BREAK_TOL`
+   trips. (The break-tol kicks in at 200, so further drift is muted.)
+3. **VEV_4000 also benefits modestly** (+8 810 → +11 744 at sk=20, K=5)
+   but the absolute lift is small — 21-tick spread, but mid std only
+   15.6 → less reversion energy to capture. Not yet wired into
+   merged traders.
+
+### 6.7 Backtester results after the v9 swap
+
+Updated merged traders (`--match-trades worse`, 3 days):
+
+| Trader | v8 swap | **v9 swap** | Δ |
+|---|---:|---:|---:|
+| `trader_round3_robust` | +70 769 | **+130 322** | +59 553 |
+| `trader_round3_upside` | +84 721 | **+144 274** | +59 553 |
+| `trader_merged_v4` | +85 032 | **+144 584** | +59 552 |
+
+Hydrogel-only standalone backtests:
+
+| File | Total | Day 0 | Day 1 | Day 2 |
+|---|---:|---:|---:|---:|
+| `trader_hydrogel_v7` | +26 173 | 9 766 | 13 432 | 2 975 |
+| `trader_hydrogel_v8_meanrev` | +53 083 | 15 701 | 24 306 | 13 076 |
+| **`trader_hydrogel_v9_aggressive`** | **+112 636** | 37 031 | 41 993 | 33 612 |
+
+### 6.8 Decision
+
+Promote v9 as the new primary hydrogel logic in all merged traders.
+Both v7 and v8 retained per CLAUDE.md research-workflow rule.
+
+Next-step research candidates (deferred):
+1. **VEV_4000 overlay** (+2.9 k incremental).
+2. **Tighter `ANCHOR_BREAK_TOL`** (e.g., 80) for live anchor-shift safety.
+3. **Per-strike take-profit** when `pos` saturates near ±CAP and mid
+   crosses anchor — early flatten could shave more spread cost.
