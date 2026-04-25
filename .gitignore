@@ -52,3 +52,6 @@ ablations/
 Ctrl-Alt-DefeatTheMarket/
 imc_trading/
 Ctrl-Alt-DefeatTheMarket
+
+# Local convenience symlink for backtester (dataset/round3 -> ROUND_3)
+/dataset/round3
