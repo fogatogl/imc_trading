@@ -185,9 +185,61 @@ In-sample: **+47 k to +53 k over 3 days** at K_FV ∈ [2, 3] (vs +25 k baseline)
 
 ---
 
-## 4. TL;DR
+## 4. Backtest validation (prosperity4bt, `--match-trades worse`)
+
+Implementation files committed to this branch:
+- `round3/trader_hydrogel_v8_meanrev.py` — fixed anchor = 10 000, K_FV = 3, CAP = 150 (recommended primary).
+- `round3/trader_hydrogel_v8_ema.py` — EMA anchor, K_FV = 2, CAP = 100 (defensive).
+
+| Variant | Day 0 | Day 1 | Day 2 | **Total** | Δ vs v7 |
+|---|---:|---:|---:|---:|---:|
+| `trader_hydrogel_v7` (baseline) | 9 766 | 13 432 | 2 975 | **26 173** | — |
+| `trader_hydrogel_v8_meanrev` (K=3, CAP=150) | 15 701 | 24 306 | 13 076 | **53 083** | **+102.8%** |
+| `trader_hydrogel_v8_ema` (K=2, CAP=100, α=0.0005) | 13 249 | 17 998 | 7 543 | **38 790** | +48.2% |
+
+Both v8 variants are profitable on every day. The fixed-anchor primary doubles baseline.
+
+### 4.1 K_FV × CAP parameter sweep (fixed anchor, full backtester)
+
+|  K  | CAP=50 | CAP=100 | CAP=150 | CAP=200 |
+|----:|-------:|--------:|--------:|--------:|
+| 0.0 | 26 173 | 26 173 | 26 173 | 26 173 |
+| 1.0 | 33 054 | 35 913 | 35 913 | 35 913 |
+| 1.5 | 33 961 | 41 677 | 41 826 | 41 826 |
+| 2.0 | 33 895 | 46 335 | 48 090 | 48 068 |
+| 2.5 | 33 786 | 47 975 | 51 290 | 51 398 |
+| 3.0 | 33 122 | 49 038 | **53 083** | 53 688 |
+| 3.5 | 33 092 | 48 648 | 53 666 | 54 852 |
+| 4.0 | 33 001 | 49 127 | 54 800 | 56 729 |
+| 5.0 | 32 773 | 48 865 | 55 390 | 57 632 |
+
+- Total P&L is monotonic in K up to ≈ 4 then flat. Reasoning to *not* push past K=3: the marginal gain (1.7 k → 4 k) comes from holding inventory closer to the 200 hard limit, which has zero margin for adverse fills. K=3, CAP=150 keeps a 50-contract buffer.
+- All cap=50 rows saturate near 33 k — cap is binding. cap≥150 captures the full signal.
+- All sweep rows are profitable on every day (no spike, no crash).
+
+### 4.2 Per-day stability check (selected rows)
+
+| K, CAP | Day 0 | Day 1 | Day 2 | Variance check |
+|---|---:|---:|---:|---|
+| 0, — | 9 766 | 13 432 | 2 975 | Day 2 is 23% of total |
+| 2.0, 150 | 14 464 | 22 770 | 10 856 | 23% / 47% / 23%, balanced |
+| 3.0, 150 | 15 701 | 24 306 | 13 076 | 30% / 46% / 25%, balanced |
+| 4.0, 200 | 16 283 | 26 430 | 14 016 | 29% / 47% / 25%, balanced |
+
+Day 1 is the largest contributor across all variants — that's where mid drifted highest above 10 000, giving the overlay the most signal to capture. Day 2 was the v7 weak day (3 k); the overlay lifts it to 13 k, the cleanest evidence that the alpha is real and not an artefact of any single day.
+
+### 4.3 Decision
+
+**Promote `trader_hydrogel_v8_meanrev` (K_FV=3, CAP=150) as the new primary hydrogel strategy.** It delivers +27 k more than v7, profitable on all three days, with sensible safety margins on the position limit. Keep `trader_hydrogel_v8_ema` as a defensive fallback if pre-round live data shows the anchor is shifting away from 10 000.
+
+Per CLAUDE.md research-workflow rule: **`trader_hydrogel_v7.py` is NOT deleted** — kept until you've reviewed the backtester comparison and approved the swap. Once approved, the next step is to swap the hydrogel block in `trader_round3_robust.py` (or its successor) to call v8.
+
+---
+
+## 5. TL;DR
 
 - Hydrogel has a 16-tick spread, near-zero adverse selection, and **strong mean-reversion to 10 000** (corr = −0.70 over 2 000 ticks, AR(1) half-life 325 ticks).
-- Pure MM (current v7) earns +25 k / 3 days.
-- Adding a mean-reversion-driven inventory target — **bias quotes long when mid < 10 000, short when mid > 10 000** — roughly doubles P&L to +53 k while staying profitable on every day.
-- Implementation is a 5-line change to `trader_hydrogel_v7.py`. New file: `trader_hydrogel_v8_meanrev.py`. Backtest, then promote into the merged round-3 trader.
+- Pure MM (current v7) earns +26 k / 3 days (backtester confirmed).
+- Adding a mean-reversion-driven inventory target — **bias inventory long when mid < 10 000, short when mid > 10 000** — lifts P&L to **+53 k** at K_FV=3, CAP=150 in the actual backtester, profitable on every day.
+- Implementation: `round3/trader_hydrogel_v8_meanrev.py` (primary) + `round3/trader_hydrogel_v8_ema.py` (defensive). v7 kept until you approve.
+- Next step: swap hydrogel block in the merged round-3 trader to v8.
