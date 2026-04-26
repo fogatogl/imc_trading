@@ -94,6 +94,63 @@ These are answered with **histograms and conditional means**, not regressions. H
 
 ---
 
+### 2.4 Confirmed findings from `research_round4.ipynb` (2026-04-26)
+
+Notebook executed end-to-end on round-4 hydrogel data. Concrete results that change the plan:
+
+#### Counterparties (hydrogel only)
+
+Three IDs on the tape: `Mark 14`, `Mark 22`, `Mark 38`. Pair frequency: Mark 14 ↔ Mark 38 = 99% of prints; Mark 22 = 19 prints across 3 days (sub-sample, ignore).
+
+Drift after trade (signed so positive = CP was right; horizons in ticks):
+
+| CP | side | n | drift t+10 | t+50 | t+100 | t+500 | label |
+|----|------|--:|-----------:|-----:|------:|------:|-------|
+| Mark 14 | buy | 496 | +8.2 | +8.6 | +8.8 | +9.8 | **informed** |
+| Mark 14 | sell | 507 | +8.1 | +9.1 | +8.5 | +5.4 | **informed** |
+| Mark 38 | buy | 515 | −7.9 | −9.0 | −8.5 | −5.2 | **passive** |
+| Mark 38 | sell | 507 | −8.0 | −8.2 | −8.5 | −9.4 | **passive** |
+| Mark 22 | both | 19 | unstable | — | — | — | ignore (n too small) |
+
+Volume-weighted version is identical magnitude. Signal is consistent across all 4 horizons and both sides → structural, not noise.
+
+**Mechanism (interpretation, not fitted):** Mark 14 lifts/hits when mid will keep moving their way. Mark 38 quotes both sides and is being adverse-selected by Mark 14. The book is essentially a duel; we sit between them.
+
+**Trader change (single discrete gate, L3-compliant):**
+- When the most recent print's aggressor is **Mark 14** and they are on the *opposite* side of our intended take/make → **skip or shrink to 1**.
+- When aggressor is **Mark 38** → **full size**, possibly +1 unit (passive flow signals reversion).
+- When aggressor is **Mark 22** or unknown → baseline behaviour.
+
+Invariance check (L5): the labels are about *direction of mid drift after the print*, not about the CP names. If round 4 swaps in different bot IDs that exhibit the same drift pattern, the gate still works after a one-line relabel from a fresh notebook run.
+
+#### Vol-armor verdict — inert in both rounds
+
+Round-3 trader uses `vol_scale = min(1, 30 / std50)` where `std50` = rolling 50 stdev of mid (wap in trader, mid in notebook — equivalent). Cap = 30.
+
+| stat | R3 std50 | R4 std50 |
+|------|---------:|---------:|
+| max | 14.06 | 14.06 |
+| 75% | 6.12 | 6.25 |
+| mean | 5.08 | 5.15 |
+
+Max realized std ≈ 14, so `30/std50 ≥ 2.14` always → clipped to 1.0. **Activation rate = 0%** in both rounds. Position limit = 200 every tick. Armor contributed **zero PnL** to the +19,712 hydrogel result. The actual position-management work was done by the inventory skew (`fair_anchor − (hp_curr/200)·6`) and the dev gates.
+
+**Action:** remove the lever from `trader_baseline.py`. We have **zero evidence** it helps; tuning a never-fired param is overfit risk (L7). Remove or — if kept defensively — set cap=10 with explicit acknowledgement that we have no PnL evidence either way and that it'll only fire on regime breaks not in our 6 days of samples.
+
+#### Anchor verdict — keep `HP_MEAN = 9991`
+
+R4 pooled mean = 9994.65, median = 9999. Mean `|mid - anchor|` over R4 is ~28-29 across all candidate anchors (9991, pooled mean, pooled median). Spread between the best and worst candidate is **0.7 ticks** of mean abs deviation — sub-noise. Day 3 drifts to median 10007.25, but switching anchors to chase that is exactly the v9 archetype on a 3-day sample. **Keep 9991.**
+
+#### Dev-band verdict — keep 14 / 22
+
+Trade band split on R4: silent 23% / make 15% / take 61% (n=1022 trades; this is trades, not ticks — ticks would weight silent higher). The take band still dominates and the gate still discriminates. No reason to retune (L7).
+
+#### Net plan after notebook
+
+Single structural change vs round-3 baseline: add a **counterparty size gate** keyed on the most recent print's aggressor. Remove the dead vol-armor. Anchor and dev thresholds untouched.
+
+---
+
 ## 3. Manual challenge — AETHER_CRYSTAL exotics
 
 This is independent of the algo trader. One-shot, scored on average PnL across **100 simulations** of the underlying.
@@ -171,9 +228,11 @@ If any box is unchecked, don't merge.
 
 | File | Purpose | Phase |
 |------|---------|-------|
-| `round4/round4_analysis.ipynb` | All offline analysis: anchor verification, smile fit, counterparty histograms | 1 |
-| `round4/trader_baseline.py` | Round-3 winner with TTE patch | 1 |
-| `round4/trader_v1_cp_size.py` | Baseline + counterparty size-shrink gate | 2 |
+| `round4/research_round4.ipynb` | Hydrogel CP + vol-armor + anchor analysis (existing, executed 2026-04-26) | 1 ✅ |
+| `round4/research_vev.ipynb` | VEV smile + per-strike CP profile + VEV_4500 post-mortem | 1 |
+| `round4/trader_baseline.py` | Round-3 winner, TTE=4d patch, **vol-armor removed** (notebook §5 verdict) | 1 |
+| `round4/trader_v1_cp_size.py` | Baseline + last-aggressor size gate (Mark 14 → shrink, Mark 38 → full) | 2 |
+| `round4/trader_v2_cp_vev.py` | If VEV CP profiling shows a clean signal, add same gate to voucher quotes | 3 |
 | `round4/manual_aether.ipynb` | Pricers + edge computation for manual exotics | 4 |
 | `round4/round4_findings.md` | Audited write-up of phase-1 analysis (companion to notebook) | 1 |
 
