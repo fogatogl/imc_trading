@@ -96,27 +96,68 @@ Instead:
 |-------|----------|--------------------|--------------|
 | 1 | ASH_COATED_OSMIUM, INTARIAN_PEPPER_ROOT | `round1/trader_ash6_fix_doublefire.py` (ASH) + `round1/2800ash_final.py` (PEPPER) | [`round1/ROUND1_STRATEGY.md`](round1/ROUND1_STRATEGY.md) |
 | 2 | (TBD — research in progress) | — | — |
-| 3 | HYDROGEL_PACK, VELVETFRUIT_EXTRACT, VEV_{4000..6500} (10 vouchers) | — (research in progress) | [`round3/round3_analysis.ipynb`](round3/round3_analysis.ipynb) |
+| 3 | HYDROGEL_PACK, VELVETFRUIT_EXTRACT, VEV_{4000..6500} (10 vouchers) | [`round3/486411/486411.py`](round3/486411/486411.py) — official PnL **36,116** | [`round3/round3_findings.md`](round3/round3_findings.md), [`round3/round3_strategy.md`](round3/round3_strategy.md), [`round3/round3_analysis.ipynb`](round3/round3_analysis.ipynb) |
+| 4 | HYDROGEL_PACK, VELVETFRUIT_EXTRACT, VEV_{4000..6500} (10 vouchers) — **same as round 3, now with counterparty IDs** + manual `AETHER_CRYSTAL` exotics | — (research in progress) | [`round4/`](round4/) |
 
 ---
 
-## Round 3 Strategy (Current) — "Gloves Off"
+## Round 3 — Final Result (closed)
 
-**Products:**
-- `HYDROGEL_PACK` — delta-1, position limit **200**
-- `VELVETFRUIT_EXTRACT` (VE) — delta-1 underlying, position limit **200**
-- `VELVETFRUIT_EXTRACT_VOUCHER` (VEV) — 10 European call options on VE, position limit **300 each**
-  - Strikes: `VEV_4000`, `VEV_4500`, `VEV_5000`, `VEV_5100`, `VEV_5200`, `VEV_5300`, `VEV_5400`, `VEV_5500`, `VEV_6000`, `VEV_6500`
-  - 7-day expiry starting Round 1. Round 3 start TTE = **5 days** (live).
-  - Historical data TTE mapping: day 0 → 8d, day 1 → 7d, day 2 → 6d.
+Submitted strategy: [`round3/486411/486411.py`](round3/486411/486411.py). Official platform PnL **+36,116 SeaShells**.
 
-**Data:** `dataset/ROUND_3/prices_round_3_day_{0,1,2}.csv`, `trades_round_3_day_{0,1,2}.csv`.
+Per-product breakdown (official):
 
-**Reference prior-year strategy:** [`round3_old_strategy.md`](round3_old_strategy.md) — IV scalping via vol-smile fit + detrended IV deviations, Black-Scholes price deviation signals, underlying mean reversion (EMA) as hedge.
+| Product | PnL |
+|---------|----:|
+| HYDROGEL_PACK | +19,712 |
+| VEV_5000 | +13,226 |
+| VEV_5300 | +8,055 |
+| VEV_5100 | +6,085 |
+| VEV_5200 | +1,482 |
+| VEV_5400 | -96 |
+| VEV_5500 | -696 |
+| VEV_4000 | -2,259 |
+| VELVETFRUIT_EXTRACT | -2,531 |
+| VEV_4500 | -6,864 |
+| **Total** | **+36,116** |
 
-**Research entrypoint:** [`round3/round3_analysis.ipynb`](round3/round3_analysis.ipynb) — replicates last-year plots (vol smile, IV deviations, BS price deviations, underlying autocorrelation) on this year's VE/VEV data.
+**Hydrogel pivot — what worked.** Earlier v9 cross-book mean-rev (`sk=20, K=6`) lost ~10k live. The submitted hydrogel block reverts to a simple mean-rev around fixed anchor `HP_MEAN = 9991` with **volatility armor** (`vol_scale = min(1, 30 / std50)` shrinks position limit when realised vol spikes), shark-taker at `|dev| > 22`, passive maker at `|dev| > 14` quoting `5` ticks beyond mid. No EMA, no regime, no imbalance — pure stationary mean-rev with size-throttle. This was the largest single contributor.
 
-**Manual trade:** Ornamental Bio-Pods. Reserve prices uniform on `[670, 920]` in steps of 5, sell-out at 920. Two bids. Second-bid penalty `((920 - avg_b2) / (920 - b2))^3` when `b2 < avg_b2`. See `round3/manual_bidding.md` (to be written).
+**VEV vouchers.** OU-corrected Black-Scholes pricing: `theo = BS(σ_ATM) + MR_STRENGTH·(δ·E[ΔS] + ν·(σ_eff − σ))`, `MR_STRENGTH = 1.0`, `EDGE = 1.5`, `TAKE_CAP = 30`. Deep-ITM strikes (≤5000) priced via BS; ATM/OTM (>5000) priced as `mid + d_emp · E[ΔS]` with empirical delta. Mostly profitable; VEV_4500 was the one large loser.
+
+**VE underlying.** Z-score taker (z=±1.5, cap 40) plus tight maker around rolling mean. Lost 2.5k — sub-noise; left as a hedge layer.
+
+---
+
+## Round 4 — "The More The Merrier" (Current Focus)
+
+Round 3 is closed. New work goes in `round4/`. Spec: [`round4/Round 4 - "The More The Merrier" 1e43d50cdd2383929a6981dced4dbc53.md`](round4/).
+
+**Algorithmic challenge — "Hello, I'm Mark":**
+- Same three product families as Round 3: `HYDROGEL_PACK` (limit 200), `VELVETFRUIT_EXTRACT` (limit 200), 10 `VEV_*` vouchers (limit 300 each).
+- **New for round 4:** `Trade.buyer` and `Trade.seller` fields are now populated with counterparty IDs (previously always `None`). Both in `state.market_trades` and historical CSV. The edge is: identify which counterparties are toxic / informed / passive and condition behavior on them.
+- VEV TTE in round 4 = **4 days** at start (down from 5 in round 3). Adjust `T_rem` initialisation in any options pricer.
+
+**Manual challenge — "Vanilla Just Isn't Exotic Enough":**
+- Underlying `AETHER_CRYSTAL` simulated as GBM, zero drift, **σ_annual = 251 %**, 4 steps per trading day, 252 trading days per year.
+- Tradable: spot, 2-week and 3-week vanilla calls/puts, plus three exotics:
+  - **Chooser** (3-week expiry; at 2-week mark you pick call-or-put, taking whichever is ITM).
+  - **Binary put** (fixed payoff if S_T < K, else 0).
+  - **Knock-out put** (vanilla put unless S ever trades below the barrier — knocked to 0 if so).
+- Score = average PnL over 100 simulations of the underlying. Volume capped per product.
+
+**What carries from round 3:**
+- The submitted hydrogel block (`HP_MEAN=9991`, vol-armor `min(1, 30/std50)`, dual-tier dev thresholds 14/22) was the largest contributor at +19,712. Use it as the round-4 baseline before adding counterparty conditioning.
+- The OU-corrected BS pricer for VEV (`MR_STRENGTH=1.0`, `EDGE=1.5`, `TAKE_CAP=30`) was net-positive across the smile. VEV_4500 was the one bad strike — investigate before re-deploying as-is.
+- VE's z-score taker + tight maker was sub-noise. Worth re-considering whether to trade VE at all in round 4, or only as a hedge against the option book.
+
+**Workflow rules carried over:**
+- One strategy file per product family — never mix products in a single research/ablation file (`feedback_separate_products`).
+- Backtest is a *gating filter*, not an optimiser. 3-day historical samples can't rank close strategies; prefer structural alpha (`feedback_alpha_not_backtest`).
+- No local plotting/comparison scripts. Open the kevin-fu1 visualizer once per variant (`feedback_no_local_compare_files`).
+- Keep `round3/` read-only as historical reference.
+
+**Research entrypoint:** to be created at `round4/round4_analysis.ipynb` once round 4 data ships.
 
 ---
 
