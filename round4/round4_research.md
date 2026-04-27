@@ -121,7 +121,7 @@ Volume-weighted version is identical magnitude. Signal is consistent across all 
 - When aggressor is **Mark 38** → **full size**, possibly +1 unit (passive flow signals reversion).
 - When aggressor is **Mark 22** or unknown → baseline behaviour.
 
-Invariance check (L5): the labels are about *direction of mid drift after the print*, not about the CP names. If round 4 swaps in different bot IDs that exhibit the same drift pattern, the gate still works after a one-line relabel from a fresh notebook run.
+Invariance check (L5): the labels are about *direction of mid drift after the print*, not about the CP names. If round 4 swaps in different bot IDs that exhibit the same drift pattern, the gate still works *after a notebook re-run + manual relabel* — but the trader code itself hardcodes the strings. [`trader_v1_cp_hydrogel.py`](trader_v1_cp_hydrogel.py) defines `HP_INFORMED = frozenset({"Mark 14"})` and `HP_PASSIVE_CP = frozenset({"Mark 38"})`. **If live R4 ships different IDs the gate silently no-ops** (no fallback, no auto-detection). Operator action required at round start: print the first ~1 000 live `state.market_trades` aggressors, confirm the IDs match — if not, relabel and redeploy. Do not rely on the gate working out-of-the-box.
 
 #### Vol-armor verdict — inert in both rounds
 
@@ -244,7 +244,9 @@ If any box is unchecked, don't merge.
 
 Question: is the existing `HP_SKEW_TICKS=6` anchor skew sized correctly?
 
-Empirical finding on R4 data: position pins at ±200 for **91%** of ticks under skew=6. Notebook §5 claim ("position management was done by inventory skew") was wrong — the skew was barely active. Sweeping skew ∈ {0, 6, 12, 20} across anchors {9991, 9995, 9997, 9999, 10000, 10003} (24-cell grid) confirmed: bigger skew lifts PnL +7k to +21k at every anchor except 9999 (which sits ≈ R4 pooled median; small skew suffices when anchor matches data center).
+Empirical finding on R4 data: position pins at ±200 for **~84%** of ticks under skew=6 (replay of baseline trade log). Notebook §5 claim ("position management was done by inventory skew") was wrong — the skew was barely active. A skew × anchor grid (skew ∈ {0, 6, 12, 20}, anchors {9991, 9995, 9997, 9999, 10000, 10003}) was run end-to-end during the 2026-04-27 inventory-control study; bigger skew lifted PnL +7k to +21k at every anchor except 9999 (which sits ≈ R4 pooled median; small skew suffices when anchor matches data center).
+
+> **Audit caveat (2026-04-29).** The 24-cell grid logs in `_invctl_probes/` were deleted on 2026-04-27 after promoting the two winners (see "Removed" list below), and the notebook does not contain reproducible cells for the sweep. The two surviving claims that *are* reproducible from current artefacts are (a) the three canonical backtests (`baseline / principled / gridbest`) and (b) the +9k principled-vs-baseline / +43k gridbest-vs-principled gaps. The "+7k to +21k at every anchor except 9999" sentence is preserved as historical record but **cannot be re-verified without re-running the grid**.
 
 **Surviving hydrogel files in `round4/`:**
 
@@ -252,7 +254,7 @@ Empirical finding on R4 data: position pins at ±200 for **91%** of ticks under 
 |------|-------:|-----:|------------:|--------|
 | `trader_baseline_hydrogel.py` | 9991 | 6 | 57,063 | R3-live control |
 | `trader_v1_cp_hydrogel.py` | 9991 | 6 | (CP-axis) | Notebook §4 CP-gate |
-| **`trader_principled_hydrogel.py`** | **9991** | **14** | **69,136** | **Skew = MAKER_DEV: at saturation, unwind tier collapses to fair-value, add tier promotes to shark threshold. Zero free parameters, falls out of L3/L4 structure.** |
+| **`trader_principled_hydrogel.py`** | **9991** | **14** | **69,136** | **Skew = MAKER_DEV: at saturation, unwind tier collapses to fair-value, add tier promotes to shark threshold. Defence: skew is *coupled* to an existing threshold rather than a free parameter — but `MAKER_DEV=14` is itself tuned, so the L7 budget is shared, not zero. The +12k vs baseline is one realisation across 3 days; treat it as inside the L7 noise band, not as evidence of a strict ranking.** |
 | `trader_gridbest_hydrogel.py` | 10003 | 20 | 112,734 | Comparison ceiling only. Anchor 10003 is fitted to R4 day-3 drift = v9 archetype. Not a ship target. |
 
 **Removed (2026-04-27, after user sign-off):**

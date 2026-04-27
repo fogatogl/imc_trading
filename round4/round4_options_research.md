@@ -46,8 +46,8 @@ The OTM branch uses **current option mid** as anchor and only adds drift correct
 
 ### Why VEV_4500 lost −6,864 (and 4000 lost −2,259)
 - For K = 4000/4500: K << S, so BS(S, K, T, σ) ≈ S − K (intrinsic), vega ≈ 0, δ ≈ 1.
-- `theo = (S − K) + MR·δ·E[ΔS] + 0`. The MR correction collapses to 1 · E[ΔS] which is **a tiny number** (≤ 1 SeaShell typically).
-- So `theo ≈ S − K`. Edge = 1.5. Each fill is essentially a δ=1 directional bet on VE wrapped in an option contract.
+- `theo = (S − K) + MR·δ·E[ΔS] + 0`. With κ = ln 2 / 30 000 and T = 4d = 40 000 ticks, the OU factor `1 − e^(−κT) ≈ 0.60`. Median `|μ_VE − S|` ≈ 12 SS in R4, so `E[ΔS]` is **~7 SS median, ~18 SS p90** — not tiny. But it's a directional VE forecast at δ ≈ 1, which is the problem (next bullet).
+- So `theo ≈ (S − K) + δ·E[ΔS]` with δ ≈ 1. Edge = 1.5. Each fill is essentially a δ=1 directional bet on VE wrapped in an option contract — we're trading VE through a wide-spread voucher proxy with no convexity.
 - R4 spread on 4500 = **16 ticks** (mean), 4000 = **21 ticks** — wide. R3 had similar. Fills cross deep into the spread → adverse selection: every fill happens at a stale ask that is *about to* track VE.
 - Net: a leveraged-VE position with adverse-selection drag. Same in R3 and R4.
 - **Verdict: drop VEV_4000 and VEV_4500 entirely.** Removing them recovers +9,123 SeaShells of negative drag without giving up any positive contributor.
@@ -129,7 +129,7 @@ VEV_6500       0     317       0
 - **Mark 01 = directional OTM-call buyer** (4 636 contracts bought, 0 sold). Concentrated on K ∈ {5300, 5400, 5500, 6000, 6500}.
 - **Mark 22 = pure VEV seller** (4 954 sold, 18 bought). LP-like role. Sells across the OTM ladder.
 - **Mark 14 / Mark 38** trade VEV_4000 (deep ITM intrinsic) almost exclusively — same dueling pair as on hydrogel; on options they only exchange intrinsic.
-- 99 % of OTM voucher prints are the single pair **Mark 01 ↔ Mark 22** (1 339 / 1 433 prints). Ours is the 1 % pair ("everyone else"). When we quote inside, we're competing with Mark 22's offers and Mark 01's bids.
+- **94 %** of OTM voucher prints (K ≥ 5200) are the single pair **Mark 01 ↔ Mark 22**: 1 339 / 1 427 prints. On the far-OTM tail (K ≥ 5400) it's **98 %** (1 196 / 1 216). Ours is the residual pair ("everyone else"). When we quote inside, we're competing with Mark 22's offers and Mark 01's bids.
 
 ![CP buyer/seller cross-tab on VEV](figures_options/cell10_fig03.png)
 
@@ -152,7 +152,7 @@ For each VEV trade, signed drift in VE underlying after the print (positive = th
 
 **Interpretation.** Mark 01 and Mark 22 are in the same direction: when Mark 01 buys, VE drifts up afterwards; when Mark 22 sells (same trade, other side), VE drifts up — Mark 22 loses on the call they sold. *Mark 01 picks off Mark 22 on options, just like Mark 14 picks off Mark 38 on hydrogel.*
 
-**Magnitude check (L5 gate).** σ_VE benchmark from notebook: σ_VE per 10 ticks ≈ 2.87 SS, per 50 ≈ 6.41 SS, per 100 ≈ 9.06 SS, per 500 ≈ 20.27 SS. Mark 01 drift +0.59 at t+50 = **0.09 σ**. Sub-noise on a 3-day, 1 339-print sample. The sign is consistent with the structural pattern (informed buyer + LP seller) but the magnitude isn't reliably > random in this window.
+**Magnitude check (L5 gate).** σ_VE benchmark from per-day non-overlapping diffs: σ_VE per 10 ticks ≈ 3.01 SS, per 50 ≈ 6.71 SS, per 100 ≈ 9.10 SS, per 500 ≈ 18.16 SS. Mark 01 drift +0.59 at t+50 = **0.09 σ**. Sub-noise on a 3-day, 1 339-print sample. The sign is consistent with the structural pattern (informed buyer + LP seller) but the magnitude isn't reliably > random in this window.
 
 → **Use as a *sizing* gate on top of an existing block, not as a fresh signal.** Same conclusion the hydrogel CP analysis reached for Mark 14/38.
 

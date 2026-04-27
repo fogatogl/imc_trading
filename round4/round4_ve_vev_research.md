@@ -69,7 +69,7 @@ Same forward-VE-drift framework as the VEV CP study, applied to VE prints. Sign 
 | Mark 67  | BUY  |  165 | **+2.24** | **+1.92** | +1.48 | +1.14 | **most informed** |
 | Mark 49  | SELL |  105 | -2.14 | -1.99 | -1.78 | -1.14 | passive / picked-off (mirror of 67) |
 | Mark 22  | SELL |  101 | -1.56 | -1.87 | -0.39 | -0.10 | picked off short-horizon |
-| Mark 22  | BUY  |   25 | +0.50 | +0.16 | -2.20 | -3.24 | small n |
+| Mark 22  | BUY  |   25 | +0.50 | +0.16 | +2.20 | +3.24 | small n |
 | Mark 55  | BUY  |  598 | +0.01 | +0.39 | +0.53 | +0.40 | LP earning the spread |
 | Mark 55  | SELL |  600 | +0.04 | +0.39 | +0.92 | +0.00 | LP earning the spread |
 | Mark 14  | BUY  |  316 | -0.26 | -0.53 | -1.26 | -0.10 | picked off |
@@ -113,7 +113,7 @@ For each strike K, regress ΔC_K on ΔS at multiple lags. Per-day diffs (avoid s
 Implications:
 - **No stale-price arb.** A "VE just moved, VEV hasn't yet" trade does not exist in this data. The option mid updates within the same 100-unit timestamp slot.
 - **Per-tick VEV move is dominated by per-tick VE move (for ATM).** R²=0.53 at K=5200, 0.38 at K=5300, 0.25 at K=5400, 0.10 at K=5500. The remaining variance is what mean-reverts in the R3 OTM branch.
-- **Far-OTM (5500) has only 31 % of its tick-to-tick variance explained by VE moves.** Most of K=5500's mid variation is its own discrete quoting noise — confirms the R3 finding that the OTM-branch alpha lives in mid mean-reversion, not in delta exposure.
+- **Far-OTM (5500) has only ~10 % of its tick-to-tick variance explained by VE moves** (R²=0.096). The remaining ~90 % is its own discrete quoting noise — confirms the R3 finding that the OTM-branch alpha lives in mid mean-reversion, not in delta exposure.
 
 ### 2.1 Empirical δ vs Black-Scholes δ
 
@@ -149,15 +149,16 @@ For each CP, count how often a VEV print is followed within 20 ticks by the same
 
 **Reading.**
 - **Mark 01 BUY VEV is NOT a hedge signal.** 30 % follow-up rate, but the directional split on VE is 212 buys / 250 sells — slightly tilted to selling, but balanced enough that you cannot read a hedge from it. Mark 01 trades VE for reasons unrelated to its VEV book.
-- **Mark 22 SELL VEV does correlate with SELL VE** (109 sells vs 3 buys, ~36×). When Mark 22 sells a voucher, they tend to sell VE in the same window. **Caveat:** the absolute base rate is tiny (107 / 1 433 = 7 % follow-up). On 99 % of Mark 22's VEV prints there is no VE counterparty action. So while the *conditional* signal is strong, it is rare.
+- **Mark 22 SELL VEV does correlate with SELL VE** (109 sells vs 3 buys, ~36×). When Mark 22 sells a voucher, they tend to sell VE in the same window. **Caveat:** the absolute base rate is tiny (107 / 1 433 = 7 % follow-up). On 93 % of Mark 22's VEV prints there is no VE counterparty action. So while the *conditional* signal is strong, it is rare.
 - **Mark 14 splits roughly balanced** on both sides. Not a clean signal.
 
-**Operational reading.** Mark 01's VEV BUY is the cleanest "Mark 01 takes a directional view on VE upside" signal we have, but it is **not externally-confirmed by VE flow** — Mark 01 does not hedge their long-call exposure via VE. Two implications:
+**Operational reading.** Three concrete conclusions:
 
-1. There is **no cross-product front-run** ("Mark 01 buys VEV → I should buy VE"). If they wanted VE long they'd be buying VE; they aren't.
-2. If we hold a long VEV position from Mark 01 ↔ Mark 22 toxicity, we should expect VE to drift up modestly *anyway* (per the VEV CP drift study from the options notebook), but **not** because Mark 01 is about to push VE — only because the structural pattern of toxic-buy / passive-sell tends to come with positive VE drift.
+1. **No cross-product front-run.** "Mark 01 buys VEV → buy VE" is unsupported by the data. The 462 VE follow-up prints split 212 buy / 250 sell — if anything Mark 01 leans slightly VE-sell after a VEV BUY, but the magnitude is sub-noise (250 vs 212 out of 1 339). Drop this idea entirely.
+2. **Mark 22 SELL VEV ↔ Mark 22 SELL VE is a rare-but-clean defensive flag** (109/3 directional split, 7 % base rate). When Mark 22 prints on the VE tape near a VEV-quoting decision, that is exactly the moment to **pull or shrink passive VEV offers on Mark-22-active strikes (5300/5400/5500)** — we don't want to be paired with the systematic-loser side. This adds to the within-VEV "never be the next Mark 22" rule from the options notebook §1.5.
+3. **Cross-product CP regression alpha is ruled out.** Within-product CP drift on VEV is sub-noise on a 3-day sample (options notebook §1.4); cross-product flow patterns only tighten conditioning, not magnify magnitude. A weighted "follow Mark 01 across products" model would be v9 in disguise.
 
-**No new alpha here, only confirmation of independence.**
+**No new directional alpha here. The data confirms (a) independence of Mark 01's two flows and (b) one small extra defensive sizing flag for Mark 22.**
 
 ---
 
@@ -247,8 +248,9 @@ The VE×VEV analysis here **does not change Phase 1**. It **fully specifies Phas
 |-------|-------|----------------|--------------------:|-------|
 | 1 | R3 OTM branch on K ∈ {5200, 5300, 5400, 5500} | none | reproduce R3 OTM PnL ~+28 k SS | Empirical-δ undershoot from §2.1 confirms R3 calibration carries |
 | 2 | Long basket {5200:100, 5300:100, 5400:100, 5500:50} | one-shot delta hedge at tick 0; rebalance band ≥ 40 Δ | gross +5 378 SS, hedge cost ≤ 500 SS | Single research backtest; do not tune basket weights against the 3-day window |
-| 3a | VEV CP-sizing (Mark 01 / Mark 22) | none | defensive | Pull passive VEV offers when last print = Mark 01 BUY |
-| 3b | VE CP-sizing (Mark 67 / Mark 49) | one-shot only | defensive | Pull passive VE-sell quotes if recent VE print = Mark 67 BUY (or Mark 49 SELL — same trade-pair). Strongest CP signal in the round, but n=165 keeps it as a sizing gate, not a directional bet |
+| 3a | VEV CP-sizing (Mark 01 / Mark 22, within-VEV) | none | defensive | Pull passive VEV offers when last print on the same strike = Mark 01 BUY (= we'd be the next Mark 22) |
+| 3b | VE CP-sizing (Mark 67 / Mark 49) | one-shot only | defensive | Pull passive VE-sell quotes if recent VE print = Mark 67 BUY (or Mark 49 SELL — same trade-pair, +2.24 SS at t+10 = 0.78 σ_VE). Strongest CP signal in the round; n=165 keeps it as a sizing gate, not a directional bet |
+| 3c | VEV CP-sizing extension (Mark 22 cross-product) | reads VE tape | defensive | When Mark 22 prints SELL on VE, pull/shrink passive VEV offers on Mark-22-active strikes {5300, 5400, 5500}. Rare flag (7 % base rate) but directionally clean (109/3 split). Layered on top of 3a |
 
 ### 5.2 What the joint analysis explicitly ruled out
 
