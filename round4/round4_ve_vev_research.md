@@ -2,7 +2,7 @@
 
 **Opened:** 2026-04-27
 **Scope:** comparative behaviour of `VELVETFRUIT_EXTRACT` (VE) and the `VEV_*` voucher chain. Where the options notebook ([`round4_options_research.md`](round4_options_research.md)) treats VEV in isolation, this document looks at the **underlying** and the **interaction** between VE flow and VEV flow.
-**Reproducible:** all numbers and figures below come from [`research_ve_vev_combined.ipynb`](research_ve_vev_combined.ipynb).
+**Reproducible:** all numbers and figures below come from [`research_ve_vev_combined.ipynb`](research_ve_vev_combined.ipynb). PNGs in [`figures_ve_vev/`](figures_ve_vev/) (regenerate with [`_make_figures_ve_vev.py`](_make_figures_ve_vev.py)).
 
 > **Discipline carried in.** Same gates as the hydrogel research and the options research (L1–L7 of [`round4_research.md`](round4_research.md) §0). Backtest is a *gating filter*, not an optimiser. Sub-σ signals stay defensive (sizing only). Discrete thresholds beat sigmoids. Structural alpha survives backtest→live; statistical doesn't.
 
@@ -79,6 +79,8 @@ Same forward-VE-drift framework as the VEV CP study, applied to VE prints. Sign 
 
 Sign convention: BUY rows use +(s_fut − s_now); SELL rows are sign-flipped so positive = CP "won" the position.
 
+![Signed VE drift after each VE print, by counterparty + side](figures_ve_vev/fig1_ve_cp_drift.png)
+
 **σ benchmark** (R3-convention): σ_VE per 10 ticks ≈ 2.87 SS, per 50 ≈ 6.41, per 100 ≈ 9.06.
 
 **Interpretation.**
@@ -108,6 +110,8 @@ For each strike K, regress ΔC_K on ΔS at multiple lags. Per-day diffs (avoid s
 | 5400 |  +0.008 |  -0.005 | -0.011 | **+0.502** | -0.015 |  +0.002 |  -0.009 |
 | 5500 |  +0.011 |  -0.000 | -0.005 | **+0.308** | -0.007 |  -0.004 |  -0.008 |
 
+![Lead-lag correlation — VE vs VEV mid](figures_ve_vev/fig2_leadlag.png)
+
 **Cleanest result of this whole document.** All lead-lag correlations are < 0.02 in absolute value at every non-zero lag. The contemporaneous correlation (lag=0) carries everything.
 
 Implications:
@@ -125,6 +129,8 @@ Slope of ΔC ~ ΔS, pooled across days, per strike:
 | 5300 |       0.261 |          0.376 |    **-0.115** | 0.384 | 29 997 |
 | 5400 |       0.112 |          0.174 |    -0.061 | 0.253 | 29 997 |
 | 5500 |       0.043 |          0.061 |    -0.018 | 0.096 | 29 997 |
+
+![Empirical δ vs BS δ + R² per strike](figures_ve_vev/fig3_delta_emp_vs_bs.png)
 
 **Empirical δ is systematically below BS δ across all four tradeable strikes.** The market's per-tick option-mid response to VE moves is **30 % smaller than Black-Scholes predicts** at the ATM strike, dropping toward parity for far OTM.
 
@@ -226,6 +232,8 @@ Forward 200-tick VE move conditional on |z| > 1.5 (rolling-window z-score, mean-
 |   3 |  2 000 |      1 542 |          +3.46  |       1 337 |          -5.31   |
 
 Round-trip cost on VE = 2 × 5 / 2 = **5 SS**. Need |fwd200| > 5 to be net-positive on raw signal.
+
+![VE z-score taker — forward 200-tick move vs 5 SS breakeven](figures_ve_vev/fig4_ve_zscore.png)
 
 **Most cells are below 5 SS.** Only window=2000 (very long lookback) crosses breakeven, and only intermittently — day 2 long is +3.70 (loses), day 3 long is +3.46 (loses). The one window (=2000) and side (short) where it consistently wins is day 1 / 3 short signals (-6.81, -5.31). This is too inconsistent to deploy.
 
