@@ -4,6 +4,7 @@
 **Scope:** algo options block only. Hydrogel handled in [`round4_research.md`](round4_research.md). Manual exotics out of scope here.
 **Source data:** `dataset/ROUND_4/prices_round_4_day_{1,2,3}.csv` + matching `trades_*` (3 historical days).
 **Live R4:** TTE = 4d at start, expiry = 4d later, 4 day-rollovers (10 000 ticks each).
+**Reproducible:** all numbers and figures below are produced by [`research_options.ipynb`](research_options.ipynb). PNGs in [`figures_options/`](figures_options/).
 
 > **Discipline carried in.** Same gates as the hydrogel research (L1–L7 of `round4_research.md` §0).
 > Backtest is a *gating filter*, not an optimiser. Any continuous coefficient tuned on 3 days = v9 in disguise.
@@ -67,10 +68,13 @@ This is a **VE-stationarity-driven** strategy, not a vol-mispricing strategy. Wo
 | stat | R3 | R4 |
 |------|---:|---:|
 | VE bid-ask spread, median | 1 | **5** |
-| VE bid-ask spread, mean | ≈ 1.0 | **5.0** |
+| VE bid-ask spread, mean | ≈ 1.0 | **4.98** |
 | VE bid-ask spread, max | 1 | 6 |
 
-R4 day 1/2/3 mean VE spread is 5.0; the spread is at exactly 5 ticks **74 % of all ticks** (22 314 / 30 000), at 6 ticks 18 %, at 1–4 ticks 7 %.
+R4 day 1/2/3 mean VE spread is 4.98; the spread is at exactly 5 ticks **74 % of all ticks** (22 314 / 30 000), at 6 ticks 18 %, at 1–4 ticks 7 %.
+VE pooled mid: mean = **5247.65**, std = 18.08, range = [5191.5, 5300.0]. Per-day means: day1 = 5248.4, day2 = 5255.4, day3 = 5239.2.
+
+![VE path + spread](figures_options/cell05_fig01.png)
 
 **Why this matters.** Every consequence of "delta-hedge with VE" gets multiplied by ~5×. Round-3-style continuous gamma scalping is dead in the water on R4 data. See §3.
 
@@ -93,6 +97,8 @@ R4 day 1/2/3 mean VE spread is 5.0; the spread is at exactly 5 ticks **74 % of a
 - 5000/5100/4500 each have **3 trades over 3 days** total. The book quotes them, but counterparties barely cross. Treat as nearly untradeable (similar to "dead strikes" — unless WE provide liquidity).
 - 6000/6500 trades print at **price 0** (1 105 contracts each over 3 days). All 317 prints are Mark 22 → Mark 01 (single pair). The book mid is 0.5 (ask=1, bid=0); the prints occur at 0 i.e. someone takes the bid. Effectively giveaway flow between two private bots — irrelevant to us; **do not quote these strikes**.
 - Active fill-able universe: **5200, 5300, 5400, 5500** (47 / 164 / 276 / 306 trades).
+
+![Per-strike spread / book size / trade count](figures_options/cell08_fig02.png)
 
 ### 1.3 Counterparty footprint on VEV options
 
@@ -121,26 +127,32 @@ VEV_6500       0     317       0
 
 **Reading.**
 - **Mark 01 = directional OTM-call buyer** (4 636 contracts bought, 0 sold). Concentrated on K ∈ {5300, 5400, 5500, 6000, 6500}.
-- **Mark 22 = pure VEV seller** (4 954 sold, 6 bought). LP-like role. Sells across the OTM ladder.
+- **Mark 22 = pure VEV seller** (4 954 sold, 18 bought). LP-like role. Sells across the OTM ladder.
 - **Mark 14 / Mark 38** trade VEV_4000 (deep ITM intrinsic) almost exclusively — same dueling pair as on hydrogel; on options they only exchange intrinsic.
-- 99 % of OTM voucher prints are the single pair **Mark 01 ↔ Mark 22**. Ours is the 1 % pair ("everyone else"). When we quote inside, we're competing with Mark 22's offers and Mark 01's bids.
+- 99 % of OTM voucher prints are the single pair **Mark 01 ↔ Mark 22** (1 339 / 1 433 prints). Ours is the 1 % pair ("everyone else"). When we quote inside, we're competing with Mark 22's offers and Mark 01's bids.
+
+![CP buyer/seller cross-tab on VEV](figures_options/cell10_fig03.png)
 
 ### 1.4 CP drift signal — informed-vs-passive on options
 
 For each VEV trade, signed drift in VE underlying after the print (positive = the CP "won" — VE moved in the direction of their option position):
 
-| CP   | side | n    | sgn drift VE t+50 | t+500 | label |
-|------|------|-----:|------------------:|------:|-------|
-| Mark 01 | BUY VEV | 1 339 | **+0.59** | **+0.96** | mildly informed |
-| Mark 22 | SELL VEV | 1 433 | (sgn flipped) +0.56 | +0.89 | uninformed (gets picked off) |
-| Mark 14 | BUY VEV | 315 | +0.07 | −1.46 | noise / mixed |
-| Mark 14 | SELL VEV | 207 | −0.01 | +0.41 | noise |
-| Mark 38 | BUY VEV | 218 | −0.08 | −0.30 | noise |
-| Mark 38 | SELL VEV | 238 | −0.25 | +1.73 | noise |
+| CP   | side | n    | drift t+10 | t+50 | t+100 | t+500 | label |
+|------|------|-----:|-----------:|-----:|------:|------:|-------|
+| Mark 01 | BUY  | 1 339 | +0.05 | **+0.59** | +0.35 | **+0.96** | mildly informed |
+| Mark 14 | BUY  |   315 | +0.04 | +0.07 | −0.06 | −1.46 | noise / mixed |
+| Mark 14 | SELL |   207 | +0.43 | +0.00 | −0.35 | −0.41 | noise |
+| Mark 22 | SELL | 1 433 | +0.02 | +0.56 | +0.43 | +0.89 | uninformed (picked off) |
+| Mark 38 | BUY  |   218 | +0.29 | −0.08 | +0.22 | −0.30 | noise |
+| Mark 38 | SELL |   238 | +0.17 | +0.25 | +0.20 | −1.73 | noise |
+
+(SELL rows are sign-flipped: a positive value means VE moved *against* the seller. Mark 22 SELL +0.56 at t+50 = VE went up by 0.56 SS after they sold — they got picked off.)
+
+![CP drift in VE underlying after each VEV print](figures_options/cell13_fig04.png)
 
 **Interpretation.** Mark 01 and Mark 22 are in the same direction: when Mark 01 buys, VE drifts up afterwards; when Mark 22 sells (same trade, other side), VE drifts up — Mark 22 loses on the call they sold. *Mark 01 picks off Mark 22 on options, just like Mark 14 picks off Mark 38 on hydrogel.*
 
-**Magnitude check (L5 gate).** σ_VE per 50 ticks ≈ 0.33·5247·√(50 / 3.65 M) ≈ 6.1 SeaShells. Drift +0.59 at t+50 = **0.10 σ**. Sub-noise on a 3-day, 1 339-print sample. The sign is consistent with the structural pattern (informed buyer + LP seller) but the magnitude isn't reliably > random in this window.
+**Magnitude check (L5 gate).** σ_VE benchmark from notebook: σ_VE per 10 ticks ≈ 2.87 SS, per 50 ≈ 6.41 SS, per 100 ≈ 9.06 SS, per 500 ≈ 20.27 SS. Mark 01 drift +0.59 at t+50 = **0.09 σ**. Sub-noise on a 3-day, 1 339-print sample. The sign is consistent with the structural pattern (informed buyer + LP seller) but the magnitude isn't reliably > random in this window.
 
 → **Use as a *sizing* gate on top of an existing block, not as a fresh signal.** Same conclusion the hydrogel CP analysis reached for Mark 14/38.
 
@@ -150,20 +162,22 @@ For each VEV trade, signed drift in VE underlying after the print (positive = th
 
 ### 2.1 IV smile, pooled across 3 days
 
-Brentq inversion of BS(call, S=VE_mid_t, T=TTE_day, σ); cut: extrinsic (= mid − intrinsic) > 2 SeaShells; brent over [1e-4, 5.0].
+Brentq inversion of BS(call, S=VE_mid_t, T=TTE_day, σ); cut: extrinsic (= mid − intrinsic) > 2 SeaShells; brent over [1e-4, 5.0]. Notebook downsamples 20× per-strike for speed (smile shape unchanged); per-day n ≈ 500 each unless extrinsic cut prunes it.
 
-| K    | day1 (TTE 7d) | day2 (TTE 6d) | day3 (TTE 5d) | pooled IV | n |
-|------|------:|------:|------:|------:|---:|
-| 5000 | 0.2324 | 0.2352 | 0.2361 | 0.2343 | 24 130 |
-| 5100 | 0.2293 | 0.2264 | 0.2244 | 0.2267 | 30 000 |
-| 5200 | 0.2355 | 0.2324 | 0.2280 | 0.2320 | 30 000 |
-| 5300 | 0.2384 | 0.2370 | 0.2318 | 0.2357 | 30 000 |
-| 5400 | 0.2211 | 0.2202 | 0.2208 | 0.2207 | 30 000 |
-| 5500 | 0.2404 | 0.2406 | 0.2359 | 0.2396 | 25 266 |
+| K    | day1 (TTE 7d) | day2 (TTE 6d) | day3 (TTE 5d) | pooled IV | within-K std | n_pooled |
+|------|------:|------:|------:|------:|------:|---:|
+| 5000 | 0.2326 | 0.2359 | 0.2360 | **0.2345** | 0.0087 | 1 207 |
+| 5100 | 0.2291 | 0.2264 | 0.2244 | **0.2267** | 0.0084 | 1 500 |
+| 5200 | 0.2355 | 0.2323 | 0.2282 | **0.2320** | 0.0078 | 1 500 |
+| 5300 | 0.2383 | 0.2369 | 0.2318 | **0.2356** | 0.0069 | 1 500 |
+| 5400 | 0.2210 | 0.2203 | 0.2208 | **0.2207** | 0.0073 | 1 500 |
+| 5500 | 0.2405 | 0.2407 | 0.2358 | **0.2396** | 0.0080 | 1 264 |
 
-**Pooled cross-strike spread = 1.9 vol-pts** (5400 = 0.221 → 5500 = 0.240). Within-strike day-to-day drift ≈ 0.5 vol-pts. **The smile is flat; the user already knew this and the R3 doc confirmed it.**
+**Pooled cross-strike spread = 0.0189** (5400 = 0.221 → 5500 = 0.240). Mean within-strike std = **0.0078** — barely 2× the cross-strike spread. **The smile is flat; the user already knew this and the R3 doc confirmed it.**
 
 The "5400 dip below the level" pattern is identical to R3 (R3 doc §4: "VEV_5400 sits ~1 vol-pt below the others — probably an artefact"). Two rounds in a row → not noise; a real per-strike level shift, but **nothing tradeable across strikes** because the gap is 1–2 vol-pts and within-strike variation is the same magnitude.
+
+![Smile scatter + per-strike mean](figures_options/cell18_fig05.png)
 
 ### 2.2 Realised vol of VE (two-scale, noise-corrected)
 
@@ -184,15 +198,30 @@ Subsampled annualised vol (1 day = 10 000 ticks, year = 365 days):
 Two-scale fit σ²(dt) = σ²_true + 2η²/dt → intercept σ_true = **0.3302**.
 Per-day at dt=200: day1 0.3190 / day2 0.3137 / day3 0.3245. **Stable across days.**
 
+![Two-scale realised-vol fit](figures_options/cell21_fig06.png)
+
 ### 2.3 The RV–IV gap
 
 | measure | value |
 |---|---:|
-| σ_real (de-noised) | **0.330** |
-| σ_implied (cross-strike pooled) | **0.230** |
-| **gap** | **+0.100 vol-pts** |
+| σ_real (de-noised, two-scale intercept) | **0.3302** |
+| σ_implied (cross-strike pooled) | **0.2315** |
+| **gap** | **+0.0986 vol-pts** |
 
-**This is the alpha the Discord mod is pointing at.** Market consistently underprices vol by ~10 vol-pts on R4 historical days. With ATM vega ≈ 200 SS / vol-pt, the theoretical edge per voucher held to expiry is ≈ 200 × 0.10 = **20 SS per ATM voucher**, or ~6 000 SS per strike at the 300-position limit, or ~12–15 k across the active 5200–5500 ladder.
+**This is the alpha the Discord mod is pointing at.** Market consistently underprices vol by ~10 vol-pts on R4 historical days. Per-voucher Greeks at live start (S = 5247.65, T = 4d, σ = 0.23):
+
+| K | δ | vega | γ |
+|---|---:|---:|---:|
+| 5000 | 0.978 |  28.50 | 0.0004 |
+| 5100 | 0.884 | 107.01 | 0.0015 |
+| 5200 | 0.652 | 203.04 | 0.0029 |
+| 5300 | 0.345 | 202.29 | 0.0029 |
+| 5400 | 0.120 | 109.69 | 0.0016 |
+| 5500 | 0.026 |  33.47 | 0.0005 |
+
+![Greeks at live start](figures_options/cell24_fig07.png)
+
+Theoretical hold-to-expiry edge per voucher (vega × +0.10 vol-pt): 5200 = **20.3 SS**, 5300 = **20.2 SS**, 5400 = 11.0 SS, 5500 = 3.4 SS. At full position 300 / strike on the active ladder {5200, 5300, 5400, 5500} → **total expected ≈ 16 455 SeaShells**.
 
 **But — see §3. The naïve gamma-scalp route to capture this gap dies on the VE bid-ask.**
 
@@ -200,47 +229,56 @@ Per-day at dt=200: day1 0.3190 / day2 0.3137 / day3 0.3245. **Stable across days
 
 ## 3. Why textbook gamma scalping is dead on R4
 
-Pathwise simulation: long 1 VEV_K call, delta-hedge with VE every 10 ticks using σ_hedge for delta calculation, charge VE_spread / 2 = 2.5 SS per unit of underlying traded.
+Pathwise simulation: long 1 VEV_K call, delta-hedge with VE every 10 ticks using σ_hedge = 0.30 for delta calculation, charge VE_spread / 2 = 2.5 SS per unit of underlying traded. n_rebalances = 2 997 over the 3-day window.
 
-**Pure gamma capture, no hedge cost (DOWN=10):**
+**Gross gamma capture vs net of VE-spread hedge cost (notebook reproduction):**
 
-| K   | GS PnL over 3d (1 contract) |
-|-----|---:|
-| 5000 |  7.45 |
-| 5100 |  8.31 |
-| 5200 |  8.85 |
-| 5300 |  9.28 |
-| 5400 | 10.32 |
-| 5500 |  6.31 |
-
-Consistent with the +0.10 vol-pt theoretical (~17 SS per 4 days × 3/4 ≈ 13 SS per 3 days, observed 9 — same ballpark, modest model-vs-empirical slippage from quantisation/IV drift).
-
-**Net of VE-spread hedge cost @ DOWN=10:**
-
-| K | GS gross | VE hedge cost | net |
+| K | gross | VE hedge cost | net |
 |---|---:|---:|---:|
-| 5000 |  +7.45 | -15.56 |  -8.12 |
-| 5100 |  +8.31 | -26.44 | -18.12 |
-| 5200 |  +8.85 | -34.27 | **-25.41** |
-| 5300 |  +9.28 | -34.35 | **-25.06** |
-| 5400 | +10.32 | -27.04 | -16.71 |
-| 5500 |  +6.31 | -17.01 | -10.70 |
+| 5000 |  +6.05 | -22.41 | -16.35 |
+| 5100 |  +7.09 | -32.46 | -25.37 |
+| 5200 |  +7.90 | -39.05 | **-31.16** |
+| 5300 |  +8.63 | -37.67 | **-29.05** |
+| 5400 |  +9.94 | -29.02 | -19.08 |
+| 5500 |  +6.12 | -18.01 | -11.89 |
+
+Gross is consistent with the +0.10 vol-pt theoretical (~17 SS per 4 days × 3/4 ≈ 13 SS per 3 days, observed 6–10 — same order, modest model-vs-empirical slippage from quantisation/IV drift). Hedge cost dominates by 3–5×.
+
+![Gamma scalp gross vs net](figures_options/cell27_fig08.png)
 
 **Hedge-band sweep** (rebalance only when |Δ_drift| > BAND, σ_hedge=0.23):
 
-| K | b=0.05 | b=0.10 | b=0.20 | b=0.50 | no rebal |
-|---|---:|---:|---:|---:|---:|
-| 5100 | -4.94 | -14.61 | -15.06 | -15.06 | -22.00 |
-| 5200 | -1.52 | +0.37  | -13.00 | -15.98 | -24.50 |
-| 5300 | +2.23 | +7.86  | -11.85 | +11.41 | -20.50 |
-| 5400 | -0.29 | -8.33  |  -4.63 | -11.00 | -11.00 |
-| 5500 | -5.10 | -4.86  |  -6.00 |  -6.00 |  -6.00 |
+| K | b=0.05 | b=0.10 | b=0.20 | b=0.30 | b=0.50 | no rebal (b=999) |
+|---|---:|---:|---:|---:|---:|---:|
+| 5100 | -4.94 | -14.61 | -15.06 | -15.06 | -15.06 | -22.0 |
+| 5200 | -1.52 | +0.37  | -13.00 | -15.98 | -15.98 | -24.5 |
+| 5300 | +2.23 | +7.86  | -11.85 | -13.55 | +11.41 | -20.5 |
+| 5400 | -0.29 | -8.33  |  -4.63 | -11.00 | -11.00 | -11.0 |
+| 5500 | -5.10 | -4.86  |  -6.00 |  -6.00 |  -6.00 |  -6.0 |
 
-The b=0.50 column for 5300 (+11.41) and the no-rebal results are **single-realization noise on a 3-day window**, not a strategy. (The VE direction across 3 days is not zero, so an unhedged long 5300 picked up an accidental +11. On a different 3-day window, sign flips. L5 / L7.)
+The b=0.50 column for 5300 (+11.41) and other lone positives are **single-realization noise on a 3-day window**, not a strategy. (The VE direction across 3 days is not zero, so an unhedged long 5300 picked up an accidental +11. On a different 3-day window, sign flips. L5 / L7.) Best per-strike: 5100/-4.94, 5200/+0.37, 5300/+11.41, 5400/-0.29, 5500/-4.86 — average ≈ -0.6, no edge.
+
+![Hedge-band sweep](figures_options/cell30_fig09.png)
 
 **Verdict.** Continuous delta-hedged gamma scalping does not survive R4 hedge cost. The theoretical +20 SS / voucher edge is real *as a static expected value* but cannot be extracted via tick-by-tick rebalancing.
 
 → **L1 (simplest model that fits the regime): the regime here is "high RV, high spread cost". Gamma-scalp model doesn't fit. Don't force it.**
+
+### 3.1 Why a single fixed-σ anchor doesn't work either
+
+Take-frequency at theo = BS(S, K, T, σ=0.235) for the active strikes:
+
+| K | n | buy edge ≥ 1.5 | sell edge ≥ 1.5 | buy edge ≥ 3 | sell edge ≥ 3 |
+|---|---:|---:|---:|---:|---:|
+| 5100 | 30 000 |  2.79 % | 0.01 % |  0.18 % | 0.00 % |
+| 5200 | 30 000 | 11.94 % | 1.47 % |  1.87 % | 0.01 % |
+| 5300 | 30 000 |  8.58 % | 6.85 % |  0.87 % | 0.58 % |
+| 5400 | 30 000 | **52.38 %** | 0.00 % | **19.72 %** | 0.00 % |
+| 5500 | 30 000 |  0.00 % | 0.40 % |  0.00 % | 0.00 % |
+
+K = 5400 looks "always rich vs σ=0.235" only because its real IV is 0.221, not 0.235. That's a per-strike level shift, not a tradeable signal. **Use a per-strike σ anchor (R3 OTM branch already does this implicitly via the online σ_ATM and the per-strike empirical-δ correction).**
+
+![Take frequency at fixed-σ anchor](figures_options/cell34_fig10.png)
 
 ---
 
