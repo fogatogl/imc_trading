@@ -1,7 +1,13 @@
 """
-Round 4 hydrogel — anchor moved from 9991 to 9994.65 (R4 pooled mean).
-Tests whether the +3.65 anchor drift observed in notebook §4 is real alpha
-or sub-noise (notebook claimed sub-noise; this gives backtest evidence).
+Round 4 hydrogel — literal grid-best variant (anchor=10003, skew=20).
+
+Kept as a comparison ceiling, NOT as a recommended ship target. Anchor
+10003 is fitted to R4 day-3 drift (median 10007) — exactly the v9 archetype
+lesson L5/L7 warns against. R4 backtest 112,734, but this is 3-day-tuned;
+no claim it survives live.
+
+Use `trader_principled_hydrogel.py` for promotion to baseline. Use this
+file only to bound the upper edge of what the grid reports.
 """
 
 from typing import List, Dict, Tuple, Any
@@ -81,12 +87,12 @@ logger = Logger()
 
 
 HP_PRODUCT        = "HYDROGEL_PACK"
-HP_MEAN           = 9994.65   # R4 pooled mean (notebook §4)
+HP_MEAN           = 10003.0
 HP_LIMIT          = 200
 HP_SHARK_DEV      = 22.0
 HP_MAKER_DEV      = 14.0
 HP_PASSIVE_OFFSET = 5
-HP_SKEW_TICKS     = 6
+HP_SKEW_TICKS     = 20
 
 
 def _wap(od: OrderDepth):

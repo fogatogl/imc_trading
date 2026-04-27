@@ -1,6 +1,14 @@
 """
-Round 4 hydrogel — anchor moved from 9991 to 9999 (R4 pooled median).
-Tests the median anchor — robust to day-3 upward drift (median 10007.25).
+Round 4 hydrogel — principled (lessons-compliant) variant.
+
+Anchor 9991: invariance argument (R3-live anchor; R4 candidate spread within
+0.7 ticks mean-abs-dev per notebook §4 — sub-noise, no evidence to move).
+Skew 14 ticks (= HP_MAKER_DEV): falls out of L3/L4 threshold structure with
+zero free parameters. At |pos|=200, unwind tier collapses to fair-value
+(dev≥0) and add tier promotes to shark threshold (dev≥28).
+
+R4 backtest: total 69,136 / min day 18,598 / pin@200 83.1%.
+Probes log: backtests/_invctl_principled.log.
 """
 
 from typing import List, Dict, Tuple, Any
@@ -80,12 +88,12 @@ logger = Logger()
 
 
 HP_PRODUCT        = "HYDROGEL_PACK"
-HP_MEAN           = 9999.0   # R4 pooled median (notebook §4)
+HP_MEAN           = 9991.0
 HP_LIMIT          = 200
 HP_SHARK_DEV      = 22.0
 HP_MAKER_DEV      = 14.0
 HP_PASSIVE_OFFSET = 5
-HP_SKEW_TICKS     = 6
+HP_SKEW_TICKS     = 14
 
 
 def _wap(od: OrderDepth):

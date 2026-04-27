@@ -156,6 +156,33 @@ For each VEV trade, signed drift in VE underlying after the print (positive = th
 
 → **Use as a *sizing* gate on top of an existing block, not as a fresh signal.** Same conclusion the hydrogel CP analysis reached for Mark 14/38.
 
+### 1.5 How to use the CP data for advantage
+
+The CP signal is real but small (sub-noise on a 3-day sample). Use it as a defensive sizing gate, not as a primary alpha source.
+
+**Operating principle: never be the next Mark 22.**
+
+Mark 22 is the systematic OTM voucher seller; Mark 01 picks the timing. VE drifts up after every Mark 01 BUY / Mark 22 SELL print (~+0.6 to +1.0 SS over 50–500 ticks). When we quote a passive offer on VEV_5300 / 5400 / 5500 inside the Mark 22 ask, every fill we receive from Mark 01 carries the same adverse-selection drift Mark 22 carries on average.
+
+Concrete rule layered on top of the phase-1 baseline:
+
+1. **Inspect last N OTM voucher prints** in `state.market_trades`. If the most recent trade on the strike we are about to quote has `buyer == 'Mark 01'`, shrink the size of any passive sell quote on that strike by 50 % or pull entirely. Symmetric reframe: when our flat fair sits below market mid and `seller == 'Mark 22'` recently, prefer taker over maker — Mark 22's offer is the adversely-priced one we want to lift.
+2. **Mark 38 ↔ Mark 14 prints on VEV_4000** are intrinsic-only flow on a strike we don't trade. Ignore for sizing decisions on the live ladder K ∈ {5200, 5300, 5400, 5500}.
+3. **VEV_6000 / VEV_6500 prints at price 0** are the Mark 01 ↔ Mark 22 private giveaway channel. Do not treat them as market data. Do not quote these strikes (already excluded from the active ladder).
+4. **Do not invert into a "follow Mark 01" signal.** With n = 1 339 prints over 3 days and 0.09 σ_VE drift magnitude, the signal does not survive an out-of-sample test. Per L5: structural alpha (sizing gate) survives backtest→live; statistical alpha (weighted CP regression) does not.
+
+Where this fits in the strategy stack:
+
+| Layer | Purpose | CP usage |
+|-------|---------|----------|
+| Phase 1 — R3 OTM branch | Capture mid-mean-reversion edge via δ | None. Take/quote per existing logic. |
+| Phase 2 — Hold-to-expiry vol bet | Capture +0.10 vol-pt RV-IV gap | None. One-shot at tick 0, no per-fill conditioning. |
+| Phase 3 — CP-conditioned sizing | Defend against adverse selection | Shrink/pull passive offers when Mark 01 last took on the same strike. |
+
+**Trader file.** If implemented, the CP-conditioned sizing layer lives in `trader_v2_cp_size.py` per L6 — never baked into the phase-1 baseline file. Modular = recoverable.
+
+**Anti-pattern reminder.** Reframing "Mark 01 likely buys soon → front-run by buying first" turns a defensive sizing gate into a directional bet. Same archetype as v9 hydrogel. The 0.09 σ_VE drift magnitude does not support a directional read; only a defensive one. Keep it as a pull-back rule, not a push-forward signal.
+
 ---
 
 ## 2. The vol surface on R4 — confirming the "flat smile"

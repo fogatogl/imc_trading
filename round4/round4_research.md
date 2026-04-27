@@ -230,13 +230,39 @@ If any box is unchecked, don't merge.
 |------|---------|-------|
 | `round4/research_round4.ipynb` | Hydrogel CP + vol-armor + anchor analysis (existing, executed 2026-04-26) | 1 ✅ |
 | `round4/research_vev.ipynb` | VEV smile + per-strike CP profile + VEV_4500 post-mortem | 1 |
-| `round4/trader_baseline.py` | Round-3 winner, TTE=4d patch, **vol-armor removed** (notebook §5 verdict) | 1 |
-| `round4/trader_v1_cp_size.py` | Baseline + last-aggressor size gate (Mark 14 → shrink, Mark 38 → full) | 2 |
+| `round4/trader_baseline_hydrogel.py` | Round-3 winner, TTE=4d patch, **vol-armor removed** (notebook §5 verdict) | 1 ✅ |
+| `round4/trader_v1_cp_hydrogel.py` | Baseline + last-aggressor size gate (Mark 14 → shrink, Mark 38 → full) | 2 ✅ |
 | `round4/trader_v2_cp_vev.py` | If VEV CP profiling shows a clean signal, add same gate to voucher quotes | 3 |
 | `round4/manual_aether.ipynb` | Pricers + edge computation for manual exotics | 4 |
 | `round4/round4_findings.md` | Audited write-up of phase-1 analysis (companion to notebook) | 1 |
 
 **Do not create** files that mix product families (L6), or scripts that compare strategies locally with custom plots (use the kevin-fu1 visualizer).
+
+---
+
+### 5.1 Inventory-control study — outcome (2026-04-27)
+
+Question: is the existing `HP_SKEW_TICKS=6` anchor skew sized correctly?
+
+Empirical finding on R4 data: position pins at ±200 for **91%** of ticks under skew=6. Notebook §5 claim ("position management was done by inventory skew") was wrong — the skew was barely active. Sweeping skew ∈ {0, 6, 12, 20} across anchors {9991, 9995, 9997, 9999, 10000, 10003} (24-cell grid) confirmed: bigger skew lifts PnL +7k to +21k at every anchor except 9999 (which sits ≈ R4 pooled median; small skew suffices when anchor matches data center).
+
+**Surviving hydrogel files in `round4/`:**
+
+| File | Anchor | Skew | R4 backtest | Defence |
+|------|-------:|-----:|------------:|--------|
+| `trader_baseline_hydrogel.py` | 9991 | 6 | 57,063 | R3-live control |
+| `trader_v1_cp_hydrogel.py` | 9991 | 6 | (CP-axis) | Notebook §4 CP-gate |
+| **`trader_principled_hydrogel.py`** | **9991** | **14** | **69,136** | **Skew = MAKER_DEV: at saturation, unwind tier collapses to fair-value, add tier promotes to shark threshold. Zero free parameters, falls out of L3/L4 structure.** |
+| `trader_gridbest_hydrogel.py` | 10003 | 20 | 112,734 | Comparison ceiling only. Anchor 10003 is fitted to R4 day-3 drift = v9 archetype. Not a ship target. |
+
+**Removed (2026-04-27, after user sign-off):**
+- `trader_v2_adaptive_anchor.py`, `trader_v3_passive_boost.py` — no structural defence; v2 chased anchor drift (v9 archetype).
+- `trader_anchor_{9995,9997,9999,10000,10003}.py` — single-anchor sweep, superseded by the 24-cell grid.
+- `_invctl_probes/` (24 anchor×skew variants) — exhausted; two winners promoted out.
+
+**Headline takeaway:** the lessons-compliant choice is `HP_MEAN=9991` + `HP_SKEW_TICKS=14`. The +9k gap to grid-best (s=20) sits inside the L7 noise band. The +43k gap to absolute grid-best (a=10003, s=20) is anchor-fitted and structurally indefensible.
+
+Canonical backtest logs at `backtests/round4_{baseline,principled,gridbest}_hydrogel.log`.
 
 ---
 
