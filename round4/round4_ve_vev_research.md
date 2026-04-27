@@ -287,3 +287,92 @@ The VE×VEV analysis here **does not change Phase 1**. It **fully specifies Phas
 > VE is a hedge instrument in R4, not an alpha instrument. The 5-tick spread killed VE round-tripping for everyone (us, Mark 14, Mark 22). Mark 55 is the structural VE LP and it earns the spread; we cannot out-make Mark 55 on VE.
 >
 > One concrete joint recipe (Basket A); two structural confirmations (R3-OTM stays calibrated; smile and lead-lag offer no fresh angle); one small defensive overlay (Mark 67 sizing gate). Anything more is v9 in disguise.
+
+---
+
+## 7. Is VE mean-reverting? — distribution, spread, stationarity
+
+Question revisited from §4.4 (VE z-score taker = dead) with proper stationarity tests, return distribution, and spread structure. Reproducer: [`_ve_meanrev_research.py`](_ve_meanrev_research.py); figures `figures_ve_vev/fig5_ve_mid_per_day.png`, `fig6_ve_returns_spread.png`. Pooled across 3 days, 30 000 ticks.
+
+### 7.1 Spread distribution
+
+| spread | count  | %     |
+|-------:|-------:|------:|
+| 1      |    186 |  0.6 % |
+| 2      |  1 032 |  3.4 % |
+| 3      |  1 003 |  3.3 % |
+| 4      |     73 |  0.2 % |
+| **5**  | **22 314** | **74.4 %** |
+| 6      |  5 392 | 18.0 % |
+
+Mean spread = 4.98, std 0.85. **The 5-tick spread is the modal regime (74 %); the only meaningfully tight windows are the 2- and 3-tick spreads (6.7 % combined, ~2 000 ticks).** Round-trip cost of crossing twice at the mode = 5 SS, the same number used as breakeven everywhere upstream in this document.
+
+The tight regime (spread ≤ 3) is rare enough that any opportunistic taker would need to *condition on the current spread* before crossing. A taker that ignores spread takes the modal 5-tick cost on every round-trip.
+
+### 7.2 Per-tick mid-return distribution
+
+| stat            | value |
+|-----------------|------:|
+| n               | 29 997 |
+| mean            | -0.0005 |
+| std             |  1.137 |
+| skew            | -0.019 |
+| excess kurtosis | +0.325 |
+| P(Δmid = 0)     | 24.8 % |
+| q01 / q05       | -3 / -2 |
+| q95 / q99       | +2 / +2.5 |
+| Jarque-Bera     | 133.6, p≈10⁻³⁰ (reject normal) |
+
+Returns are zero-mean, symmetric, mildly leptokurtic (excess kurt 0.33 — not heavy-tailed). 25 % of ticks have no mid change. Quantiles are tight: 99 % of moves fall in [-3, +2.5] — VE has a small per-tick step distribution relative to its 5-tick spread.
+
+### 7.3 Stationarity / mean-reversion battery (per-day)
+
+| day | ADF p   | VR(2) | VR(10) | VR(50) | VR(200) | Hurst | OU half-life | net drift |
+|----:|--------:|------:|-------:|-------:|--------:|------:|-------------:|----------:|
+| 1   | 0.0294  | 0.831 | 0.689  | 0.770  | 0.693   | 0.502 | 235 ticks    | +20.5     |
+| 2   | 0.1748  | 0.845 | 0.705  | 0.614  | 0.554   | 0.454 | 348 ticks    | +28.0     |
+| 3   | 0.0104  | 0.844 | 0.703  | 0.700  | 0.627   | 0.478 | 297 ticks    | -63.5     |
+
+Pooled per-day-diff VR(2) = 0.840, VR(10) = 0.699.
+
+Return autocorrelation (pooled): **acf(1) = -0.160**, acf(2) = -0.011, acf(k) ≈ 0 for k ≥ 3.
+
+**Reading.**
+- **Variance ratios are uniformly < 1** (0.55–0.85) — variance of multi-step changes grows slower than linearly, the textbook signature of mean reversion. Magnitude is modest (VR(10) ≈ 0.70 means 30 % of one-step variance is reversed by t+10).
+- **Hurst H ≈ 0.48** (across days) — essentially random-walk (0.50) with a faint mean-reverting tilt. Consistent with VR.
+- **acf(1) = -0.16** is the dominant signature. Lag-1 returns are negatively correlated; lags ≥ 2 are noise. This is the classic bid-ask bounce + microstructure mean-rev pattern, *not* a slow OU trend reversion.
+- **ADF rejects unit-root for days 1 (p=0.03) and 3 (p=0.01) but NOT day 2 (p=0.17).** VE is not robustly stationary — it walks when it walks (day 2) and flips direction when it flips (day 3 net drift -63.5 vs day 1 +20.5).
+- **OU half-life 235–348 ticks** with the day-2 drift case stretching to 348. Half-life of ~300 ticks against an std of ~17 SS gives an expected mean-rev pullback of ~8.5 SS over a half-life — **above** the 5 SS round-trip cost in *expectation*, but with realisation noise that swamps the edge on any single round-trip (per-tick std = 1.14, so the 8.5 SS expected pullback is buried under √300 × 1.14 ≈ 20 SS of path noise).
+
+### 7.4 Forward-move conditional on rolling-z (window = 200)
+
+Reproduces §4.4 with one canonical window. Threshold |z| > 1.5; horizons h = 50/200/500. Mean forward Δmid:
+
+| day | h   | n hi (z>+1.5) | fwd hi  | n lo (z<-1.5) | fwd lo |
+|----:|----:|--------------:|--------:|--------------:|-------:|
+| 1   |  50 |       1 629   |  +0.12  |       1 648   |  +0.50 |
+| 1   | 200 |       1 603   |  -1.27  |       1 625   |  +1.93 |
+| 1   | 500 |       1 568   |  -1.09  |       1 595   |  +6.15 |
+| 2   |  50 |       1 404   |  -0.03  |       1 541   |  +0.80 |
+| 2   | 200 |       1 309   |  +0.60  |       1 541   |  +0.01 |
+| 2   | 500 |       1 302   |  -3.10  |       1 457   |  +4.04 |
+| 3   |  50 |       1 450   |  -1.42  |       1 642   |  +0.41 |
+| 3   | 200 |       1 450   |  -2.01  |       1 625   |  -0.06 |
+| 3   | 500 |       1 437   |  -6.95  |       1 502   |  +5.21 |
+
+**Mean-rev expected sign** (fwd hi negative, fwd lo positive) holds for **9 / 18 cells** at h ∈ {200, 500}. Magnitudes that beat the 5 SS round-trip cost: only h = 500 short-side on days 1, 3 (+6.15, +5.21) and h = 500 long-side on day 3 (-6.95). The h = 50 cells are sub-tick — z-score taking on short horizons is pure noise. Day 2 is barely mean-reverting at any horizon.
+
+This is the same conclusion §4.4 reached with the wider window grid: **mean reversion is real but too slow and too small relative to the 5-tick spread to extract via crossing**. A taker needs ≈ 500-tick horizon to clear the spread on average, and even then only on 2 of 3 days.
+
+### 7.5 Verdict
+
+**VE is weakly mean-reverting on the second-tick scale (acf(1) = -0.16, microstructure bounce) and weakly mean-reverting on a multi-hundred-tick scale (VR ≈ 0.70, OU half-life ~300t).** Neither is stationary in the strong sense — ADF fails for day 2, and per-day net drifts of ±20–60 SS confirm that *what looks like reversion within a day reflects the random-walk component, not a stable anchor*.
+
+Practical consequences (none of which change the §5 stack):
+
+- **No stationary anchor analogous to HYDROGEL_PACK's `HP_MEAN = 9991`.** Hydrogel mean-reverts around a fixed level; VE mean-reverts around a moving level. A "VE z-score taker against a fixed mean" is structurally wrong; against a rolling mean it is the §4.4 strategy that just failed at all but the longest horizons.
+- **Microstructure mean-rev (acf(1) = -0.16) is captured by the LP.** Mark 55's footprint in §1.2 (BUY +0.39 / SELL +0.39 at t+50) is exactly what earning the lag-1 reversion looks like. We cannot out-make Mark 55 on VE; the negative acf(1) is already priced into the inside.
+- **Slow mean-rev (VR ≈ 0.70) is not extractable over the 5-tick spread on a 3-day sample.** The half-life of ~300 ticks puts the breakeven horizon for crossing-once into the same regime where day-level drift dominates expected reversion (day 3 reversed +28 SS of day-2 drift only to drop -63 SS net — the "mean" you'd revert to was nowhere visible from inside the day).
+- **The §1.2 Mark 67 / Mark 49 CP signal is more extractable than the price-level z-score signal**, because it conditions on event-level information (a specific informed buyer just printed) rather than price-level statistics (mid is +1.5 σ above its 200-tick rolling mean). +2.24 SS at t+10 on Mark 67 BUY n=165 dominates anything in §7.4 on a per-prediction basis.
+
+**Bottom line.** VE is mean-reverting only in the trivial microstructure sense already absorbed by the LP, and weakly mean-reverting on a 300-tick horizon at a magnitude that does not clear the 5-tick spread. This *confirms* the §4.4 / §6 north-star claim that **VE is a hedge instrument, not an alpha instrument** — the §5 stack stands unchanged. The new addition is a quantitative reason: **VR(10) = 0.70, ADF non-rejection for 1/3 days, OU half-life ≥ 235 ticks**.
