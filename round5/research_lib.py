@@ -31,7 +31,10 @@ _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from imc_commun.stats import hurst_rs, variance_ratio, zscore  # noqa: E402
+try:
+    from imc_stats.stats import hurst_rs, variance_ratio, zscore  # noqa: E402
+except ModuleNotFoundError:  # legacy local layout
+    from imc_commun.stats import hurst_rs, variance_ratio, zscore  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Constants

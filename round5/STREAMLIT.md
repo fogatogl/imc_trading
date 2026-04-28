@@ -10,10 +10,9 @@ Public Streamlit Cloud entry point: [`round5/visualizer.py`](visualizer.py).
 3. Branch: `main`. Main file path: `round5/visualizer.py`.
 4. Python version: 3.11. The platform reads [`requirements.txt`](../requirements.txt)
    from the repo root automatically.
-5. Submodules: this repo has [`imc_commun`](../imc_commun) as a submodule
-   that the pipeline imports (`from imc_commun.stats import …`). Streamlit
-   Cloud supports submodules by default — the build step runs
-   `git submodule update --init --recursive`. No extra configuration.
+5. Stats helpers (`hurst_rs`, `variance_ratio`, `zscore`) live in
+   [`imc_stats/stats.py`](../imc_stats/stats.py) at the repo root —
+   vendored copy, no submodule init needed.
 6. Click **Deploy**.
 
 ## What the visualizer reads

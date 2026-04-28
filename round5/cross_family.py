@@ -38,7 +38,10 @@ from sklearn.metrics import adjusted_rand_score, silhouette_score
 from sklearn.preprocessing import StandardScaler
 from statsmodels.tsa.stattools import adfuller, grangercausalitytests
 
-from imc_commun.stats import variance_ratio
+try:
+    from imc_stats.stats import variance_ratio
+except ModuleNotFoundError:
+    from imc_commun.stats import variance_ratio
 
 from .research_lib import (
     DATASET_ROOT,
@@ -190,7 +193,10 @@ def product_features(all_data: dict[str, ProductData]) -> pd.DataFrame:
         vol_cluster_lag1 = float(abs_ret.autocorr(1)) if len(abs_ret) > 1 else np.nan
         # Hurst on log-returns (cheap version: window 2000)
         try:
-            from imc_commun.stats import hurst_rs
+            try:
+                from imc_stats.stats import hurst_rs
+            except ModuleNotFoundError:
+                from imc_commun.stats import hurst_rs
             log_ret = np.log(d.px["mid"]).diff().dropna().values
             H, _, _, _ = hurst_rs(log_ret, n_max=2000)
             hurst = float(H) if H == H else np.nan
