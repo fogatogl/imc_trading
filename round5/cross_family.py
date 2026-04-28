@@ -456,6 +456,62 @@ def best_leadlag_per_pair(table: pd.DataFrame) -> pd.DataFrame:
     return pos.loc[idx].sort_values("abs_corr", ascending=False).reset_index(drop=True)
 
 
+def basket_vs_leg_table(
+    panel: pd.DataFrame,
+    family_map: dict[str, list[str]] | None = None,
+    *,
+    lags: Iterable[int] = (1, 2, 3, 4, 5),
+    loo: bool = True,
+    leg_signal_panel: Optional[pd.DataFrame] = None,
+) -> pd.DataFrame:
+    """Per-family basket(t-L) -> leg(t) Pearson corr.
+
+    ``loo=True`` (default) builds the basket from the *other* legs in the
+    family — required because each leg has its own lag-1 mean reversion that,
+    if included in the basket, leaks into the cross-corr and inflates the
+    apparent signal (audited 2026-04-29: PEBBLES, ROBOT, OXYGEN_SHAKE
+    "basket signals" were 50-100% contamination under this path; SNACKPACK_PIS
+    was the only signal that survived LOO).
+
+    ``leg_signal_panel`` lets the *predictor* be a different signal than the
+    *target* (e.g. basket built from order-flow imbalance, leg target = mid
+    return). Defaults to using ``panel`` for both.
+
+    Index of ``panel`` may be a (day, timestamp) MultiIndex; corrs are
+    computed pooled across the index. For per-day stability, group externally.
+    """
+    if panel.empty:
+        return pd.DataFrame()
+    if family_map is None:
+        family_map = FAMILIES
+    src = panel if leg_signal_panel is None else leg_signal_panel
+    rows = []
+    for fam, members in family_map.items():
+        members = [m for m in members if m in panel.columns and m in src.columns]
+        if len(members) < 2:
+            continue
+        for leg in members:
+            if loo:
+                others = [m for m in members if m != leg]
+                basket = src[others].mean(axis=1)
+            else:
+                basket = src[members].mean(axis=1)
+            target = panel[leg]
+            for L in lags:
+                pair = pd.concat([basket.shift(L), target], axis=1).dropna()
+                if len(pair) < 200:
+                    continue
+                rows.append({
+                    "family": fam,
+                    "leg": leg,
+                    "lag": int(L),
+                    "loo": bool(loo),
+                    "n": int(len(pair)),
+                    "corr": float(pair.iloc[:, 0].corr(pair.iloc[:, 1])),
+                })
+    return pd.DataFrame(rows)
+
+
 def leadlag_stability(
     cluster_agg: pd.DataFrame, candidate_pairs: pd.DataFrame, gates: Gates,
 ) -> pd.DataFrame:

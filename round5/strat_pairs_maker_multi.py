@@ -5,17 +5,28 @@ Architecture: each pair runs the validated SNACKPACK maker pattern with
 its own β / size / state. No cross-pair coupling — they share only the
 Trader.run() entry point and the Logger.
 
-Why each pair was included:
+All pairs pass the maker-friendly screen:
+    |corr| ≥ 0.7   AND   no β sign-flip across days   AND   β range ≤ 4×
+    AND   bid-ask ≥ 2 ticks (room for +1/-1 touch improvement).
 
-    | pair                                    | β_seed  | size_a/b | rationale                                                          |
-    | SNACKPACK_CHOCOLATE  / SNACKPACK_VANILLA   | -1.000 | 5/5      | proven +975 standalone; β stable, |corr|=0.93                       |
-    | MICROCHIP_SQUARE     / MICROCHIP_RECTANGLE | -2.146 | 4/9      | coint pair; failed taker but maker capture independent of β stability |
-    | UV_VISOR_AMBER       / UV_VISOR_MAGENTA    | -1.409 | 5/7      | coint pair; same logic as MICROCHIP                                |
-    | SLEEP_POD_COTTON     / SLEEP_POD_POLYESTER | +0.795 | 5/4      | high-corr (|corr|=0.88), β stable in sign                          |
+Pairs that failed the sign-flip test (MICROCHIP_SQ/RECT, UV_VISOR_AM/MAG)
+were tested earlier and confirmed unsafe — both posted catastrophic
+day-4 losses when β changed sign. Excluded.
 
-All four products in each pair have bid-ask ≥ 7 ticks (SNACKPACK 17,
-UV_VISOR 9-15, MICROCHIP 7-13, SLEEP_POD 9-12), so the +1/-1 inside-the-
-touch maker pattern has room to operate.
+    | pair                                       | β_seed  | size_a/b | rationale                                                                         |
+    | SNACKPACK_CHOCOLATE  / SNACKPACK_VANILLA   | -1.000 | 5/5      | proven +975 standalone; β=[-0.81,-1.00,-0.98], |corr|=0.93                         |
+    | SLEEP_POD_COTTON     / SLEEP_POD_POLYESTER | +0.795 | 5/4      | β=[+0.59,+0.67,+1.62] all positive; |corr|=0.88                                    |
+    | PEBBLES_S            / PEBBLES_XL          | -0.391 | 5/2      | β=[-0.24,-0.08,-0.30] all negative; |corr|=0.83. Small |β| → small B leg          |
+
+Constraint enforced: **all pairs are disjoint on symbols.** When two pairs
+share a leg, both `trade_pair` calls read the same `state.position[X]`
+and issue contradictory delta-orders, jerking that symbol's position
+around each tick and paying bid-ask on every cycle. POL/SUE was tested
+in this slot and bled −3,472 on day 2 alone (POL shared with COT/POL).
+Excluded.
+
+All products have bid-ask ≥ 9 ticks (SNACKPACK 17, SLEEP_POD 10-11,
+PEBBLES 12/17), so the +1/-1 maker pattern has plenty of room.
 
 Mechanics (per pair, applied independently):
     spread = mid_A - β · mid_B
@@ -63,9 +74,8 @@ class PairConfig:
 
 PAIRS: list[PairConfig] = [
     PairConfig(key="snack",    a="SNACKPACK_CHOCOLATE",  b="SNACKPACK_VANILLA",    beta=-1.000, size_a=5, size_b=5),
-    PairConfig(key="micro_sr", a="MICROCHIP_SQUARE",     b="MICROCHIP_RECTANGLE",  beta=-2.146, size_a=4, size_b=9),
-    PairConfig(key="uv_am",    a="UV_VISOR_AMBER",       b="UV_VISOR_MAGENTA",     beta=-1.409, size_a=5, size_b=7),
     PairConfig(key="sleep_cp", a="SLEEP_POD_COTTON",     b="SLEEP_POD_POLYESTER",  beta=+0.795, size_a=5, size_b=4),
+    PairConfig(key="peb_sxl",  a="PEBBLES_S",            b="PEBBLES_XL",           beta=-0.391, size_a=5, size_b=2),
 ]
 
 
