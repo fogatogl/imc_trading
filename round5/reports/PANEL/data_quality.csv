@@ -1,0 +1,6 @@
+product,n_ticks,warnings,frac_nan_mid,frac_nan_bid1,frac_nan_ask1,frac_crossed,frac_locked,frac_zero_spread,n_stale_runs,frac_stale_long,ret_std,n_outlier_5sig,day_jump_z_max,frac_zero_l1_bid,frac_zero_l1_ask,has_warnings
+PANEL_1X2,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,9.054314775969502,0,0.44177832326043637,0.0,0.0,False
+PANEL_1X4,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,9.483080758364387,0,2.530823116615475,0.0,0.0,False
+PANEL_2X2,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,9.596168133627376,0,2.2925817569730245,0.0,0.0,False
+PANEL_2X4,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,11.289150694291232,0,1.5058705885285655,0.0,0.0,False
+PANEL_4X4,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,9.957093872356968,0,0.4017236405799949,0.0,0.0,False

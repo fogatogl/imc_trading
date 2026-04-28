@@ -1,0 +1,6 @@
+product,n_ticks,warnings,frac_nan_mid,frac_nan_bid1,frac_nan_ask1,frac_crossed,frac_locked,frac_zero_spread,n_stale_runs,frac_stale_long,ret_std,n_outlier_5sig,day_jump_z_max,frac_zero_l1_bid,frac_zero_l1_ask,has_warnings
+SNACKPACK_CHOCOLATE,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,6.575629448170933,0,0.7603834795451851,0.0,0.0,False
+SNACKPACK_VANILLA,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,6.5130845088618745,0,0.7676854174388292,0.0,0.0,False
+SNACKPACK_RASPBERRY,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,8.091811635504358,0,1.23581720020806,0.0,0.0,False
+SNACKPACK_STRAWBERRY,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,8.13303063521981,0,1.1065985613070002,0.0,0.0,False
+SNACKPACK_PISTACHIO,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,5.237774061032533,0,1.718287176027179,0.0,0.0,False

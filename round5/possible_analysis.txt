@@ -1,0 +1,94 @@
+Clustering produits
+Feature vector par produit (vectorise chaque produit en stats statiques) — tout déjà calculé:
+
+ADF p-value, half-life, Hurst (price + cumret)
+log-ret std, skew, kurt, ACF1, ACF1(ret²)
+VR(2,8,32)
+spread moyen, imbalance moyen, depth moyen
+realized vol per day (mean, std)
+Standardize → PCA(2-5) → cluster.
+
+Distance métriques (matrices N×N):
+
+1 - |corr(returns)| — co-mouvement
+1 - |corr(rolling_vol)| — co-mouvement vol
+ADF p-value Engle-Granger (cointegration distance)
+DTW sur price series (slow, mais capture lead-lag)
+Algos (sklearn):
+
+AgglomerativeClustering ward/average sur distance — déterministe, lisible
+KMeans sur features PCA — rapide
+HDBSCAN sur corr-distance — détecte outliers (produits standalone)
+SpectralClustering sur corr matrix — gère non-convex
+AffinityPropagation — choisit K auto
+Validation: silhouette score, gap statistic, stabilité bootstrap.
+
+Pour ton dataset 50 produits: hiérarchique ward sur 1 − corr(returns) = baseline solide. HDBSCAN sur PCA(features) trouve groupes "naturels" qui peuvent diverger de tes 10 baskets définis.
+
+ML pour indicateurs trade
+Pipeline standard:
+
+Feature engineering (signal > model):
+
+Lags returns (1..20)
+Rolling vol ratios (realized / EWMA / GARCH)
+LOB: imbalance, spread/spread_mean, microprice−mid
+Cross-asset: returns lead-product, basket residual (vs PCA PC1)
+Flow: trade volume imbalance bucket, intertrade time
+Regime: rolling ACF1(ret²), rolling avg pairwise corr
+Targets:
+
+Sign(forward N-tick return) — classification
+Forward N-tick return — regression
+Forward realized vol — vol forecasting
+Spread mean-reversion direction (pair) — pair signal
+Modèles (ordre complexité/perf):
+
+Linear/Lasso — baseline, interprétable
+LogReg — sign prediction
+XGBoost/LightGBM — sweet spot tabulaire, robuste, fast
+GARCH/HAR-RV — vol forecast
+HMM — regime detection (low/high vol state)
+Validation critique:
+
+Walk-forward CV (jamais shuffle — leak temporel)
+Hold out day 4 entier
+Permutation test pour significance
+Métrique = Sharpe out-of-sample de strat dérivée, pas R²
+Backtest:
+
+Convert prediction → position (z-score, Kelly fraction)
+Cost model: spread, slippage, position limits
+Compare vs baselines (z-score MR, momentum)
+Neural networks
+Quand worth it:
+
+Séquences brutes (LSTM/GRU/TCN) sur LOB snapshots
+Cross-asset attention (Transformer) — captures lead-lag complexes
+Tu as 30k ticks/produit/day × 3 days × 50 produits = data ok
+Quand inutile:
+
+Features tabulaires statiques → XGBoost gagne souvent
+Petit dataset par produit isolé
+Architectures pertinentes:
+
+MLP 2-3 couches sur features engineered — baseline NN
+LSTM/GRU sur séquence returns + LOB — capture mémoire
+1D CNN / TCN — patterns courte-portée, parallèle
+DeepLOB (Zhang et al. 2019) — CNN+LSTM sur LOB book images, signal court-terme
+Transformer small — attention sur lags + cross-product
+Autoencoder — reconstruction error = anomalie → contrarian signal
+Pièges NN finance:
+
+Overfit sévère, data limitée → regularize fort (dropout 0.3+, weight decay, early stop)
+Non-stationarité: model trained day 2 dégrade day 4 → walk-forward retrain
+Sharpe artificiellement gonflé sans cost model
+RL (PPO/DQN) pour MM/exécution: élégant en théorie, data-hungry et instable. Skip sauf si beaucoup de simulation environnement.
+
+Concrètement pour ton repo
+Pipeline réaliste IMC:
+
+Ajouter onglet "Clustering" au dashboard: feature vector + hiérarchique + heatmap distance + label cluster par produit
+Notebook séparé ml_signals.py: XGBoost forward-return classifier avec walk-forward, output feature importance
+Notebook dl_signals.py: TCN ou LSTM léger sur LOB séquences, target 100-tick forward return
+Backtest commun avec cost model: spread/2 par trade

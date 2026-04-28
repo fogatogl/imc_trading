@@ -1,0 +1,6 @@
+product,n_ticks,warnings,frac_nan_mid,frac_nan_bid1,frac_nan_ask1,frac_crossed,frac_locked,frac_zero_spread,n_stale_runs,frac_stale_long,ret_std,n_outlier_5sig,day_jump_z_max,frac_zero_l1_bid,frac_zero_l1_ask,has_warnings
+PEBBLES_XS,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,15.052447626596651,0,0.9632984853825026,0.0,0.0,False
+PEBBLES_S,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,15.020329732243344,0,1.564546212960545,0.0,0.0,False
+PEBBLES_M,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,15.133575807756875,0,0.46254765489145505,0.0,0.0,False
+PEBBLES_L,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,15.025542810383982,0,1.8302167413875432,0.0,0.0,False
+PEBBLES_XL,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,30.314215952644922,0,1.5009459611648017,0.0,0.0,False

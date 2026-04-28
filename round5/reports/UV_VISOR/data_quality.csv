@@ -1,0 +1,6 @@
+product,n_ticks,warnings,frac_nan_mid,frac_nan_bid1,frac_nan_ask1,frac_crossed,frac_locked,frac_zero_spread,n_stale_runs,frac_stale_long,ret_std,n_outlier_5sig,day_jump_z_max,frac_zero_l1_bid,frac_zero_l1_ask,has_warnings
+UV_VISOR_AMBER,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,8.005040545986699,1,0.43722451871336415,0.0,0.0,False
+UV_VISOR_MAGENTA,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,11.202458468393031,0,2.588717474991897,0.0,0.0,False
+UV_VISOR_ORANGE,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,10.460568900706253,0,1.242762236298859,0.0,0.0,False
+UV_VISOR_RED,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,11.03045304432564,0,0.634606753854139,0.0,0.0,False
+UV_VISOR_YELLOW,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,11.0061588293722,0,1.0902986397012127,0.0,0.0,False

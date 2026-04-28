@@ -1,0 +1,6 @@
+product,n_ticks,warnings,frac_nan_mid,frac_nan_bid1,frac_nan_ask1,frac_crossed,frac_locked,frac_zero_spread,n_stale_runs,frac_stale_long,ret_std,n_outlier_5sig,day_jump_z_max,frac_zero_l1_bid,frac_zero_l1_ask,has_warnings
+MICROCHIP_CIRCLE,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,9.23424283187838,0,1.3536572762465808,0.0,0.0,False
+MICROCHIP_OVAL,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,12.478011055304409,0,0.9616917268957534,0.0,0.0,False
+MICROCHIP_SQUARE,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,20.707524247737695,0,0.7243743781509157,0.0,0.0,False
+MICROCHIP_RECTANGLE,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,13.130331963193719,0,0.685435830962107,0.0,0.0,False
+MICROCHIP_TRIANGLE,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,14.504033623110104,0,0.7584097145550651,0.0,0.0,False

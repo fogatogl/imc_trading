@@ -1,0 +1,6 @@
+product,n_ticks,warnings,frac_nan_mid,frac_nan_bid1,frac_nan_ask1,frac_crossed,frac_locked,frac_zero_spread,n_stale_runs,frac_stale_long,ret_std,n_outlier_5sig,day_jump_z_max,frac_zero_l1_bid,frac_zero_l1_ask,has_warnings
+SLEEP_POD_SUEDE,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,11.421701898123061,0,1.2257367706559241,0.0,0.0,False
+SLEEP_POD_LAMB_WOOL,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,10.712462882120464,0,0.7001191119661012,0.0,0.0,False
+SLEEP_POD_POLYESTER,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,11.890822208857307,0,1.2194278701097014,0.0,0.0,False
+SLEEP_POD_NYLON,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,9.620981727801189,0,1.299243710637084,0.0,0.0,False
+SLEEP_POD_COTTON,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,11.676551884168802,0,0.47102946610950797,0.0,0.0,False

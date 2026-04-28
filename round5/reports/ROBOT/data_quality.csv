@@ -1,0 +1,6 @@
+product,n_ticks,warnings,frac_nan_mid,frac_nan_bid1,frac_nan_ask1,frac_crossed,frac_locked,frac_zero_spread,n_stale_runs,frac_stale_long,ret_std,n_outlier_5sig,day_jump_z_max,frac_zero_l1_bid,frac_zero_l1_ask,has_warnings
+ROBOT_VACUUMING,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,9.235648845638504,0,1.840693630099219,0.0,0.0,False
+ROBOT_MOPPING,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,11.145837544926557,0,0.5383175535992917,0.0,0.0,False
+ROBOT_DISHES,30000,OUTLIER_RETURNS: 740 ret_1 |z|>5,0.0,0.0,0.0,0.0,0.0,0.0,6,0.012566666666666667,17.779549455771743,740,1.096765699744419,0.0,0.0,True
+ROBOT_LAUNDRY,30000,,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,9.822310405959934,0,1.5271356106704155,0.0,0.0,False
+ROBOT_IRONING,30000,OUTLIER_RETURNS: 56 ret_1 |z|>5,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,10.443724191983174,56,0.9575128389235148,0.0,0.0,True
