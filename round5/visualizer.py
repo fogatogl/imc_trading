@@ -4,13 +4,16 @@ Run from repo root::
 
     .venv/Scripts/streamlit.exe run round5/visualizer.py
 
-Six views in the sidebar:
-    1. Universe Overview  — 50-product table, archetype distribution, filters.
-    2. Family Drilldown    — per-family stats, within-family heatmaps + figures.
-    3. Product Detail      — full per-product card with IC heatmap + figures.
-    4. Cross-Family        — clustering + lead-lag findings.
-    5. Vol Spikes          — 4σ event study, post-spike profile, co-occurrence.
-    6. Calibration         — gate threshold validation.
+Views in the sidebar:
+    1. Universe Overview   — 50-product table, archetype distribution, filters.
+    2. Family Drilldown     — per-family stats, within-family heatmaps + figures.
+    3. Multi-Product        — custom subset across families: stats, corr,
+                              lead-lag, IC heatmap, overlaid distributions.
+    4. Product Detail       — full per-product card with IC heatmap + figures.
+    5. Product Deep Dive    — exhaustive single-product report.
+    6. Cross-Family         — clustering + lead-lag findings.
+    7. Vol Spikes           — 4σ event study, post-spike profile, co-occurrence.
+    8. Calibration          — gate threshold validation.
 
 Reads from ``round5/reports/`` (no recomputation). Cache decorators keep the
 DataFrames warm across reruns. To refresh after a pipeline rerun, hit
@@ -1863,6 +1866,298 @@ def view_product_deep_dive(arch: pd.DataFrame, stats: pd.DataFrame, ic_long: pd.
 
 
 # ---------------------------------------------------------------------------
+# View 4b: Multi-Product Analysis (custom selection across families)
+# ---------------------------------------------------------------------------
+
+def _aligned_multi_panel(products: list[str], col: str) -> pd.DataFrame:
+    """Stack the per-product `col` series on a (day, timestamp) index so each
+    product becomes one column. Cached upstream via load_product_px_tr."""
+    series = {}
+    for p in products:
+        px_p, _ = load_product_px_tr(p)
+        if px_p.empty or col not in px_p.columns:
+            continue
+        s = px_p.set_index(["day", "timestamp"])[col]
+        s = s[~s.index.duplicated(keep="first")]
+        series[p] = s
+    return pd.DataFrame(series) if series else pd.DataFrame()
+
+
+def _multi_corr(products: list[str], on: str) -> pd.DataFrame:
+    panel = _aligned_multi_panel(products, on)
+    return panel.corr() if not panel.empty else pd.DataFrame()
+
+
+def _multi_leadlag(products: list[str], lag: int) -> pd.DataFrame:
+    """Entry [A, B] = corr(ret_1[A]_t, ret_1[B]_{t+lag}). Positive ⇒ A leads B."""
+    panel = _aligned_multi_panel(products, "ret_1")
+    if panel.empty:
+        return pd.DataFrame()
+    cols = list(panel.columns)
+    out = pd.DataFrame(np.nan, index=cols, columns=cols)
+    for a in cols:
+        sa = panel[a]
+        for b in cols:
+            sb = panel[b].shift(-lag)
+            j = pd.concat([sa, sb], axis=1).dropna()
+            if len(j) < 50:
+                continue
+            out.loc[a, b] = j.iloc[:, 0].corr(j.iloc[:, 1])
+    return out
+
+
+def plot_normalized_overlay(products: list[str], sample_step: int = 5) -> go.Figure:
+    """Z-scored mid series for each selected product, concatenated across days."""
+    fig = go.Figure()
+    any_data = False
+    for p in products:
+        px_p, _ = load_product_px_tr(p)
+        if px_p.empty:
+            continue
+        s = px_p["mid"].astype(float)
+        if s.std() == 0 or len(s) < 10:
+            continue
+        z = (s - s.mean()) / s.std()
+        x = np.arange(len(z))[::sample_step]
+        y = z.values[::sample_step]
+        fig.add_trace(go.Scattergl(x=x, y=y, mode="lines",
+                                    name=p, line=dict(width=0.7),
+                                    hovertemplate=p + "<br>tick=%{x}<br>z=%{y:+.2f}<extra></extra>"))
+        any_data = True
+    if not any_data:
+        return go.Figure()
+    fig.add_hline(y=0, line_color="black", line_width=0.5)
+    fig.update_layout(height=420, margin=dict(t=20, b=30, l=10, r=10),
+                      xaxis_title="tick (concatenated days)",
+                      yaxis_title="z-scored mid")
+    return fig
+
+
+def plot_overlay_hist(products: list[str], col: str, n_bins: int = 60,
+                      x_title: str = "") -> go.Figure:
+    fig = go.Figure()
+    any_data = False
+    for p in products:
+        px_p, _ = load_product_px_tr(p)
+        if px_p.empty or col not in px_p.columns:
+            continue
+        s = px_p[col].dropna()
+        if s.empty:
+            continue
+        any_data = True
+        fig.add_trace(go.Histogram(x=s, name=p, opacity=0.45, nbinsx=n_bins,
+                                    histnorm="probability density"))
+    if not any_data:
+        return go.Figure()
+    fig.update_layout(height=380, margin=dict(t=20, b=30, l=10, r=10),
+                      barmode="overlay", xaxis_title=x_title or col,
+                      yaxis_title="density")
+    return fig
+
+
+def view_multi_product(arch: pd.DataFrame, stats: pd.DataFrame,
+                       ic_long: pd.DataFrame, vol: pd.DataFrame):
+    st.header("Multi-Product Analysis")
+    st.caption("Pick any subset of products across families. Get cross-product "
+               "correlations, lead-lag, stats, archetype mix, IC heatmap, and "
+               "overlaid distributions on the fly. Heavy ops scale with #products² — "
+               "keep selection ≲ 15 for snappy interaction.")
+
+    # ---- Selector ----
+    with st.container(border=True):
+        st.markdown("**Selection**")
+        c1, c2 = st.columns([1, 3])
+        with c1:
+            pre = st.selectbox("Preset",
+                               ["(custom)"] + list(FAMILIES.keys()) + ["ALL 50"],
+                               index=0, key="mp_preset")
+        if pre == "ALL 50":
+            default_products = ALL_PRODUCTS
+        elif pre in FAMILIES:
+            default_products = list(FAMILIES[pre])
+        else:
+            default_products = list(FAMILIES[list(FAMILIES.keys())[0]])[:3]
+        with c2:
+            selected = st.multiselect(
+                "Products", options=ALL_PRODUCTS, default=default_products,
+                key="mp_selected",
+                help="Search by typing. Mix products from different families.",
+            )
+
+    if not selected:
+        st.info("Select at least one product to begin.")
+        return
+    if len(selected) > 25:
+        st.warning(f"You selected {len(selected)} products. Cross-product matrices "
+                   f"may take a while to compute (n² ≈ {len(selected)**2}).")
+
+    # ---- Headline counts ----
+    sub_arch = arch[arch["product"].isin(selected)].copy()
+    sub_stats = stats[stats["product"].isin(selected)].copy() if not stats.empty else pd.DataFrame()
+    n_total = len(selected)
+    n_mr = (sub_arch["archetype"] == "MR_TAKER").sum()
+    n_ne = (sub_arch["archetype"] == "NO_EDGE").sum()
+    n_pair = int(sub_arch["is_pair"].sum()) if "is_pair" in sub_arch.columns else 0
+    n_obi = int(sub_arch["is_obi"].sum()) if "is_obi" in sub_arch.columns else 0
+    n_mm = int(sub_arch["is_mm"].sum()) if "is_mm" in sub_arch.columns else 0
+
+    cols = st.columns(7)
+    cols[0].metric("Selected", n_total)
+    cols[1].metric("Families", sub_arch["family"].nunique() if "family" in sub_arch.columns else 0)
+    cols[2].metric("MR_TAKER", int(n_mr))
+    cols[3].metric("NO_EDGE", int(n_ne))
+    cols[4].metric("PAIR", n_pair)
+    cols[5].metric("OBI", n_obi)
+    cols[6].metric("MM", n_mm)
+
+    # ---- Tabs ----
+    tab_table, tab_arch, tab_corr, tab_ll, tab_overlay, tab_ic, tab_spikes = st.tabs(
+        ["Stats table", "Archetype mix", "Correlations",
+         "Lead-lag", "Overlays", "IC heatmap", "Vol spikes"]
+    )
+
+    with tab_table:
+        st.markdown("**Per-product stats** (subset of `stats_per_product.csv`)")
+        if sub_stats.empty:
+            st.caption("No stats available.")
+        else:
+            keep = ["family", "product", "vr_k5", "hurst", "acf_ret1_lag1",
+                    "adf_p_mid", "vwap_hurst", "vwap_adf_p", "vwap_acf_lag1",
+                    "spread_median", "ret1_std", "limit10_saturation",
+                    "depth_l1_mean", "trade_freq"]
+            keep = [c for c in keep if c in sub_stats.columns]
+            merged = sub_arch[["product", "archetype", "mr_confidence"]].merge(
+                sub_stats[keep], on="product", how="right")
+            ordered_cols = [c for c in (
+                ["family", "product", "archetype", "mr_confidence"]
+                + [c for c in keep if c not in ("family", "product")])
+                if c in merged.columns]
+            st.dataframe(merged[ordered_cols].sort_values(["family", "product"]),
+                         use_container_width=True, hide_index=True, height=420)
+
+        st.markdown("**Archetype + flag breakdown**")
+        flag_cols = ["product", "family", "archetype", "mr_confidence",
+                      "is_pair", "pair_partner", "is_obi", "obi_direction",
+                      "is_mm", "mm_pnl"]
+        flag_cols = [c for c in flag_cols if c in sub_arch.columns]
+        st.dataframe(sub_arch[flag_cols].sort_values(["family", "product"]),
+                     use_container_width=True, hide_index=True, height=320)
+
+    with tab_arch:
+        # Archetype × confidence stacked bar
+        if "mr_confidence" in sub_arch.columns:
+            chart_df = (sub_arch.assign(conf=sub_arch["mr_confidence"].fillna("n/a"))
+                                .groupby(["archetype", "conf"]).size().reset_index(name="n"))
+            fig = px.bar(chart_df, x="archetype", y="n", color="conf",
+                         color_discrete_map=CONFIDENCE_COLORS,
+                         category_orders={"conf": ["high", "medium", "low", "n/a"]},
+                         title="Archetype × MR confidence (selected products)")
+            fig.update_layout(height=360, margin=dict(t=40, b=20, l=10, r=10))
+            st.plotly_chart(fig, use_container_width=True)
+        # Per-family flag counts within selection
+        if "family" in sub_arch.columns:
+            flag_df = sub_arch.groupby("family").agg(
+                MR=("archetype", lambda x: (x == "MR_TAKER").sum()),
+                NO_EDGE=("archetype", lambda x: (x == "NO_EDGE").sum()),
+                PAIR=("is_pair", "sum") if "is_pair" in sub_arch.columns else ("archetype", "count"),
+                OBI=("is_obi", "sum") if "is_obi" in sub_arch.columns else ("archetype", "count"),
+                MM=("is_mm", "sum") if "is_mm" in sub_arch.columns else ("archetype", "count"),
+            ).reset_index()
+            long = flag_df.melt(id_vars="family", var_name="bucket", value_name="n")
+            fig = px.bar(long, x="family", y="n", color="bucket", barmode="group",
+                         title="Flag counts per family (within selection)")
+            fig.update_layout(height=360, margin=dict(t=40, b=20, l=10, r=10))
+            fig.update_xaxes(tickangle=-30)
+            st.plotly_chart(fig, use_container_width=True)
+
+    with tab_corr:
+        st.caption("Computed on the fly from raw px aligned on (day, timestamp).")
+        sub_tabs = st.tabs(["corr_mid", "corr_returns"])
+        with sub_tabs[0]:
+            with st.spinner("Computing corr_mid ..."):
+                m = _multi_corr(selected, "mid")
+            if m.empty:
+                st.info("No aligned data.")
+            else:
+                st.plotly_chart(plot_corr_heatmap(m, "corr_mid"),
+                                 use_container_width=True, key="mp_corr_mid")
+        with sub_tabs[1]:
+            with st.spinner("Computing corr_returns ..."):
+                m = _multi_corr(selected, "ret_1")
+            if m.empty:
+                st.info("No aligned data.")
+            else:
+                st.plotly_chart(plot_corr_heatmap(m, "corr_returns"),
+                                 use_container_width=True, key="mp_corr_ret")
+
+    with tab_ll:
+        st.caption("Entry [row, col] = corr(ret_1[row]_t, ret_1[col]_{t+lag}). "
+                    "Positive ⇒ row leads col.")
+        lag = st.select_slider("Lag (ticks)", options=[1, 2, 5, 10, 20, 50, 100],
+                                value=10, key="mp_ll_lag")
+        with st.spinner(f"Computing lead-lag matrix at lag={lag} ..."):
+            ll = _multi_leadlag(selected, lag)
+        if ll.empty:
+            st.info("No aligned data.")
+        else:
+            zmax = max(0.05, float(ll.abs().to_numpy().max(initial=0.05)))
+            st.plotly_chart(
+                plot_corr_heatmap(ll, f"lead_lag (lag={lag})", zmin=-zmax, zmax=zmax),
+                use_container_width=True, key=f"mp_ll_{lag}",
+            )
+
+    with tab_overlay:
+        sub_tabs = st.tabs(["Z-scored mid", "Returns dist", "Spread dist", "std_50 dist"])
+        with sub_tabs[0]:
+            step = st.slider("Downsample step", 1, 30, 5, key="mp_overlay_step")
+            with st.spinner("Loading raw mid series ..."):
+                fig = plot_normalized_overlay(selected, sample_step=step)
+            st.plotly_chart(fig, use_container_width=True)
+            st.caption("Each series z-scored independently → comparable shape, "
+                       "not level. Click legend to toggle products.")
+        with sub_tabs[1]:
+            st.plotly_chart(plot_overlay_hist(selected, "ret_1", x_title="ret_1 (mid diff)"),
+                             use_container_width=True)
+        with sub_tabs[2]:
+            st.plotly_chart(plot_overlay_hist(selected, "spread", x_title="spread (ask − bid)"),
+                             use_container_width=True)
+        with sub_tabs[3]:
+            st.plotly_chart(plot_overlay_hist(selected, "std_50",
+                                                x_title="std_50 (rolling 50-tick std of ret_1)"),
+                             use_container_width=True)
+
+    with tab_ic:
+        if ic_long.empty:
+            st.caption("No IC data available.")
+        else:
+            sub_ic = ic_long[ic_long["product"].isin(selected)].copy()
+            if sub_ic.empty:
+                st.info("No IC rows for the selected products.")
+            else:
+                st.plotly_chart(plot_family_ic_heatmap(sub_ic, HORIZONS),
+                                 use_container_width=True)
+                st.caption("Rows = (product | signal). Cols = horizons. "
+                           "Same scale as Family Drilldown.")
+
+    with tab_spikes:
+        spike_sum = load_spike_summary()
+        if spike_sum.empty:
+            st.caption("Vol-spike study not run yet.")
+        else:
+            sub_sp = spike_sum[spike_sum["product"].isin(selected)].copy()
+            if sub_sp.empty:
+                st.info("None of the selected products have spike data.")
+            else:
+                cols_show = [c for c in [
+                    "family", "product", "n_spikes", "spike_rate_per_10k",
+                    "z_mean", "spread_widen_x", "depth_drop_x",
+                    "post_h10_mean", "post_h50_mean",
+                ] if c in sub_sp.columns]
+                st.dataframe(sub_sp[cols_show].sort_values("n_spikes", ascending=False),
+                             use_container_width=True, hide_index=True)
+
+
+# ---------------------------------------------------------------------------
 # View 5 (renamed from 4): Cross-Family
 # ---------------------------------------------------------------------------
 
@@ -2456,8 +2751,9 @@ def main():
     with st.sidebar:
         st.title("Round 5")
         st.caption("Pipeline visualizer")
-        view = st.radio("View", ["Universe", "Family", "Product", "Product Deep Dive",
-                                  "Cross-Family", "Vol Spikes", "Calibration"])
+        view = st.radio("View", ["Universe", "Family", "Multi-Product", "Product",
+                                  "Product Deep Dive", "Cross-Family", "Vol Spikes",
+                                  "Calibration"])
         st.divider()
         st.caption(f"{len(arch)} products / {arch['family'].nunique()} families")
         st.caption(f"MR_TAKER: {(arch['archetype']=='MR_TAKER').sum()}  /  "
@@ -2474,6 +2770,8 @@ def main():
         view_universe(arch, stats)
     elif view == "Family":
         view_family(arch, stats, micro, vol)
+    elif view == "Multi-Product":
+        view_multi_product(arch, stats, ic_long, vol)
     elif view == "Product":
         view_product(arch, stats, ic_long, vol, dq)
     elif view == "Product Deep Dive":
