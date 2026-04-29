@@ -2556,8 +2556,11 @@ def view_multi_product(arch: pd.DataFrame, stats: pd.DataFrame,
             st.caption("No IC data available.")
         else:
             score = _predictability_score(ic_long, selected, HORIZONS)
-            top_n = st.slider("Show top N", 5, max(5, len(score)), min(30, len(score)),
-                              key="mp_score_n")
+            if len(score) > 5:
+                top_n = st.slider("Show top N", 5, len(score), min(30, len(score)),
+                                  key="mp_score_n")
+            else:
+                top_n = max(1, len(score))
             st.plotly_chart(plot_predictability_scoreboard(score, top_n=top_n),
                              use_container_width=True)
             with st.expander("Full table", expanded=False):
@@ -2571,8 +2574,11 @@ def view_multi_product(arch: pd.DataFrame, stats: pd.DataFrame,
         h_obi = st.select_slider("Forward horizon (ticks)",
                                    options=list(HORIZONS), value=10 if 10 in HORIZONS else HORIZONS[0],
                                    key="mp_obi_h")
-        max_panels = st.slider("Max products to render", 4, 24, min(16, len(selected)),
-                                key="mp_obi_max")
+        if len(selected) >= 4:
+            max_panels = st.slider("Max products to render", 4, max(4, min(24, len(selected))),
+                                    min(16, len(selected)), key="mp_obi_max")
+        else:
+            max_panels = len(selected)
         with st.spinner(f"Computing OBI panels at h={h_obi} ..."):
             fig_obi = plot_obi_panel_grid(selected, horizon=int(h_obi), max_panels=max_panels)
         st.plotly_chart(fig_obi, use_container_width=True, key=f"mp_obi_{h_obi}_{max_panels}")
