@@ -18,7 +18,7 @@ plus the live evidence already on the table (e.g. ORANGE went from +2,697 with
 |---:|---|---:|---|---:|---|
 | **1** | **MICROCHIP** | +1,792 | 3 untouched MR + 2 stationary pairs (incl. coint_p=0.020) | +3,000–6,000 | low |
 | **2** | **UV_VISOR** | +8,640 | AMBER untouched + AMBER↔MAGENTA stationary pair + 5/5 OBI follow signals | +3,000–6,000 | low |
-| **3** | **PANEL** | 0 | family virgin, 1 high-conf + 2 low-conf MR | +1,000–3,000 | medium |
+| **3** | **PANEL** | +11 (560470) | 1 high-conf + 2 low-conf MR | +1,000–3,000 | medium |
 | 4 | OXYGEN_SHAKE | +3,497 | MORNING_BREATH untouched (high-conf MR) | +500–1,500 | low |
 | 5 | GALAXY_SOUNDS | +3,441 | SOLAR_WINDS untouched (low-conf MR) | +500–1,500 | low |
 | 6 | SLEEP_POD | +9,710 | LAMB_WOOL/SUEDE untouched but contradictions/non-stat | +500–1,000 | medium |
@@ -116,7 +116,12 @@ otherwise identical) before claiming the OBI lift is real.
 
 ---
 
-## #3 — PANEL (0 → ~+1,500–3,000)
+## #3 — PANEL (+11 → ~+1,500–3,000)
+
+**Live status update (2026-04-29):** 560470 (naive MM + position-aware
+trend filter, `strat_panel_mm_v5_postrend`) shipped → live D5 +11.
+Essentially flat but the first PANEL submission to break even — beats
+559949's −3,155 (deleted) and the prior untraded 0 floor.
 
 **Pipeline signals:**
 

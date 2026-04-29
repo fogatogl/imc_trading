@@ -347,7 +347,9 @@ results are post-hoc validation.
 retained. `556502/` (v6, retuned SNACKPACK overfit), `556665/` (early SNK
 pair experiment, superseded by 556852), `559949/` (PANEL naive MM, live
 −3,155 per `feedback_naive_mm_no_trend_defense`) were removed; their
-lessons are summarized below and in feedback memories.
+lessons are summarized below and in feedback memories. Kept winners:
+`549159/`, `555509/`, `556852/`, `558897/`, `560161/`, `560470/` (PANEL
+break-even).
 
 ## MM submission history (round-5 multi-product MM)
 
@@ -395,8 +397,8 @@ Inspected 6 submissions (`549159 / 555509 / 556502 / 556665 / 556852 / 556909` +
 | GALAXY_SOUNDS | **+3,441** | 555509 ⊕ 549159 | BH +2,229 / FLAMES +1,212 |
 | UV_VISOR | **+8,640** | 558897 | ORANGE +4,124 / RED +3,822 / MAGENTA +695 (drop YELLOW −214) |
 | MICROCHIP | **+1,792** | 556909 ⊕ 549159 | TRI +1,528 / CIRCLE +264 |
-| PANEL | 0 | none | not traded |
-| **TOTAL** | **+51,051** | | |
+| PANEL | **+11** | 560470 (v5 trend-filtered naive MM) | first break-even submission |
+| **TOTAL** | **+53,681** | | (was +51,051 pre-560470) |
 
 ### Untouched products (improvement headroom)
 
