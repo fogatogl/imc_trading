@@ -7,8 +7,11 @@ Run from repo root::
 Views in the sidebar:
     1. Universe Overview   — 50-product table, archetype distribution, filters.
     2. Family Drilldown     — per-family stats, within-family heatmaps + figures.
-    3. Multi-Product        — custom subset across families: stats, corr,
-                              lead-lag, IC heatmap, overlaid distributions.
+    3. Multi-Product        — custom subset across families with full
+                              alpha-discovery toolkit: signal × product IC,
+                              predictability scoreboard, OBI panels,
+                              microprice premium, variance-ratio + half-life
+                              profile, on-the-fly pair builder, PCA factor.
     4. Product Detail       — full per-product card with IC heatmap + figures.
     5. Product Deep Dive    — exhaustive single-product report.
     6. Cross-Family         — clustering + lead-lag findings.
@@ -1955,12 +1958,402 @@ def plot_overlay_hist(products: list[str], col: str, n_bins: int = 60,
     return fig
 
 
+# ---- Alpha-discovery helpers ----
+
+def _predictability_score(ic_long: pd.DataFrame, products: list[str],
+                          horizons: tuple) -> pd.DataFrame:
+    """Per product: max |IC| across all (signal × horizon) cells, with the
+    cell that achieved it. n_significant_cells = HAC + FDR-pass cells."""
+    rows = []
+    for p in products:
+        sub = ic_long[ic_long["product"] == p] if not ic_long.empty else pd.DataFrame()
+        best_abs = 0.0
+        best_signal = ""
+        best_h: object = ""
+        sig_cells = 0
+        if not sub.empty:
+            for _, r in sub.iterrows():
+                fdr_pass = bool(r.get("significant", False))
+                for h in horizons:
+                    ic = r.get(f"ic_h{h}")
+                    pv = r.get(f"p_h{h}")
+                    if pd.notna(ic):
+                        a = abs(float(ic))
+                        if a > best_abs:
+                            best_abs = a
+                            best_signal = str(r["signal"])
+                            best_h = h
+                        if fdr_pass and pd.notna(pv) and float(pv) < 0.05:
+                            sig_cells += 1
+        rows.append({"product": p, "max_abs_ic": best_abs,
+                     "best_signal": best_signal, "best_horizon": best_h,
+                     "n_significant_cells": sig_cells})
+    return pd.DataFrame(rows).sort_values("max_abs_ic", ascending=False)
+
+
+def plot_signal_product_ic(ic_long: pd.DataFrame, products: list[str],
+                            horizon: int) -> go.Figure:
+    """Heatmap rows=products, cols=signals, value=IC at chosen horizon. * = HAC p<0.05."""
+    sub = ic_long[ic_long["product"].isin(products)].copy()
+    if sub.empty:
+        return go.Figure()
+    col_ic = f"ic_h{horizon}"
+    col_p = f"p_h{horizon}"
+    if col_ic not in sub.columns:
+        return go.Figure()
+    pivot_ic = sub.pivot(index="product", columns="signal", values=col_ic)
+    pivot_p = sub.pivot(index="product", columns="signal", values=col_p) if col_p in sub.columns else None
+    pivot_ic = pivot_ic.reindex(index=[p for p in products if p in pivot_ic.index])
+    if pivot_ic.empty:
+        return go.Figure()
+    arr = pivot_ic.values.astype(float)
+    finite = np.isfinite(arr)
+    zmax = max(0.02, float(np.nanmax(np.abs(arr[finite]))) if finite.any() else 0.02)
+    text = []
+    for i in range(pivot_ic.shape[0]):
+        row = []
+        for j in range(pivot_ic.shape[1]):
+            v = pivot_ic.iloc[i, j]
+            pv = pivot_p.iloc[i, j] if pivot_p is not None else float("nan")
+            mark = "*" if pd.notna(pv) and pv < 0.05 else ""
+            row.append(f"{v:+.3f}{mark}" if pd.notna(v) else "")
+        text.append(row)
+    fig = go.Figure(go.Heatmap(
+        z=arr, x=pivot_ic.columns.tolist(), y=pivot_ic.index.tolist(),
+        colorscale="RdBu_r", zmin=-zmax, zmax=zmax,
+        text=text, texttemplate="%{text}",
+        hovertemplate="product=%{y}<br>signal=%{x}<br>IC=%{z:+.4f}<extra></extra>",
+    ))
+    fig.update_layout(
+        height=max(360, 22 * len(pivot_ic) + 80),
+        margin=dict(t=40, b=20, l=10, r=10),
+        title=f"Signal × Product IC at h={horizon}    (* = HAC p<0.05)",
+        yaxis=dict(autorange="reversed"),
+        xaxis_tickangle=-30,
+    )
+    return fig
+
+
+def plot_predictability_scoreboard(score: pd.DataFrame, top_n: int = 30) -> go.Figure:
+    if score.empty:
+        return go.Figure()
+    df = score.head(top_n)[::-1]
+    fig = go.Figure(go.Bar(
+        y=df["product"], x=df["max_abs_ic"], orientation="h",
+        marker_color="#1f77b4",
+        text=[f"{v:.3f}  ({s} h={h})" if s else f"{v:.3f}"
+              for v, s, h in zip(df["max_abs_ic"], df["best_signal"], df["best_horizon"])],
+        textposition="outside",
+        hovertemplate=("%{y}<br>|IC|max=%{x:.4f}"
+                       "<br>signal=%{customdata[0]} h=%{customdata[1]}"
+                       "<br>n_sig_cells=%{customdata[2]}<extra></extra>"),
+        customdata=df[["best_signal", "best_horizon", "n_significant_cells"]].values,
+    ))
+    fig.update_layout(
+        height=max(280, 22 * len(df) + 80),
+        margin=dict(t=40, b=20, l=10, r=10),
+        title=f"Predictability scoreboard — top {len(df)} by max |IC|",
+        xaxis_title="max |IC| across all (signal × horizon) cells",
+    )
+    return fig
+
+
+def plot_obi_panel_grid(products: list[str], horizon: int = 10,
+                         max_panels: int = 16) -> go.Figure:
+    """Small-multiples panel: per product, OBI-decile mean fwd_ret with SE."""
+    from plotly.subplots import make_subplots
+    panels = products[:max_panels]
+    n = len(panels)
+    if n == 0:
+        return go.Figure()
+    cols = min(4, n)
+    rows = (n + cols - 1) // cols
+    fig = make_subplots(rows=rows, cols=cols, subplot_titles=panels,
+                         vertical_spacing=0.10, horizontal_spacing=0.06)
+    drew = 0
+    col_fwd = f"fwd_{horizon}"
+    for i, p in enumerate(panels):
+        px_p, _ = load_product_px_tr(p)
+        if px_p.empty or "obi_l1" not in px_p.columns or col_fwd not in px_p.columns:
+            continue
+        s = px_p[["obi_l1", col_fwd]].dropna()
+        if len(s) < 100:
+            continue
+        s = s.copy()
+        try:
+            s["q"] = pd.qcut(s["obi_l1"], 10, labels=False, duplicates="drop")
+        except ValueError:
+            continue
+        dec = s.groupby("q").agg(obi_mean=("obi_l1", "mean"),
+                                  fwd_mean=(col_fwd, "mean"),
+                                  fwd_se=(col_fwd, lambda x: x.std() / max(np.sqrt(len(x)), 1.0))
+                                  ).reset_index()
+        r = i // cols + 1
+        c = i % cols + 1
+        fig.add_trace(go.Scatter(x=dec["obi_mean"], y=dec["fwd_mean"],
+                                  error_y=dict(type="data", array=dec["fwd_se"], visible=True),
+                                  mode="lines+markers", line=dict(color="firebrick", width=1.5),
+                                  showlegend=False,
+                                  hovertemplate=p + "<br>OBI=%{x:+.2f}<br>fwd=%{y:+.4f}<extra></extra>"),
+                       row=r, col=c)
+        fig.add_hline(y=0, line_color="grey", line_width=0.5, row=r, col=c)
+        fig.add_vline(x=0, line_color="grey", line_width=0.5, row=r, col=c)
+        drew += 1
+    if drew == 0:
+        return go.Figure()
+    fig.update_layout(height=210 * rows + 80, margin=dict(t=60, b=30, l=10, r=10),
+                      title=f"OBI → fwd_ret (h={horizon}) decile means per product")
+    return fig
+
+
+def plot_microprice_premium(products: list[str], n_bins: int = 50) -> go.Figure:
+    """Density of (microprice − mid) per product. Concentrated mass off-zero
+    flags one-sided book imbalance — predictive of next move."""
+    fig = go.Figure()
+    any_data = False
+    for p in products:
+        px_p, _ = load_product_px_tr(p)
+        if px_p.empty or "microprice" not in px_p.columns or "mid" not in px_p.columns:
+            continue
+        s = (px_p["microprice"] - px_p["mid"]).dropna()
+        if s.empty or s.std() == 0:
+            continue
+        any_data = True
+        fig.add_trace(go.Histogram(x=s, name=p, opacity=0.45, nbinsx=n_bins,
+                                    histnorm="probability density"))
+    if not any_data:
+        return go.Figure()
+    fig.add_vline(x=0, line_color="black", line_width=0.6)
+    fig.update_layout(height=380, margin=dict(t=40, b=30, l=10, r=10),
+                      barmode="overlay",
+                      xaxis_title="microprice − mid  (signed deviation)",
+                      yaxis_title="density",
+                      title="Microprice premium — Stoikov's HFT short-horizon predictor")
+    return fig
+
+
+def plot_vr_profile(products: list[str]) -> go.Figure:
+    """Variance-ratio VR(k) overlay across selected products. VR<1 ⇒ mean-rev,
+    VR>1 ⇒ momentum, VR=1 ⇒ random walk."""
+    fig = go.Figure()
+    ks = [2, 3, 5, 10, 20, 50, 100]
+    any_data = False
+    for p in products:
+        px_p, _ = load_product_px_tr(p)
+        if px_p.empty or "ret_1" not in px_p.columns:
+            continue
+        r = px_p["ret_1"].dropna().values
+        if len(r) < 200:
+            continue
+        var_1 = float(np.var(r, ddof=1))
+        if var_1 == 0:
+            continue
+        ys = []
+        for k in ks:
+            r_k = pd.Series(r).rolling(k).sum().dropna().values
+            if len(r_k) < 10:
+                ys.append(np.nan); continue
+            ys.append(float(np.var(r_k, ddof=1) / (k * var_1)))
+        any_data = True
+        fig.add_trace(go.Scatter(x=ks, y=ys, mode="lines+markers", name=p,
+                                  hovertemplate=p + "<br>k=%{x}<br>VR=%{y:.3f}<extra></extra>"))
+    if not any_data:
+        return go.Figure()
+    fig.add_hline(y=1.0, line_color="black", line_dash="dash", line_width=0.8,
+                   annotation_text="VR=1 (random walk)", annotation_position="top right")
+    fig.update_xaxes(type="log")
+    fig.update_layout(height=420, margin=dict(t=40, b=30, l=10, r=10),
+                      xaxis_title="aggregation k (ticks)",
+                      yaxis_title="VR(k) = var(r_k) / (k · var(r_1))",
+                      title="Variance-ratio profile — VR<1 ⇒ MR, VR>1 ⇒ momentum")
+    return fig
+
+
+def _fit_ar1_halflife(s: pd.Series) -> tuple[float, float]:
+    """OLS AR(1): s_t = α + ρ·s_{t-1} + ε. Returns (ρ, half_life_in_ticks).
+    half_life = -log(2)/log(ρ) when 0<ρ<1, else NaN."""
+    s = s.dropna().astype(float)
+    if len(s) < 50:
+        return float("nan"), float("nan")
+    y = s.iloc[1:].values
+    x = s.iloc[:-1].values
+    X = np.column_stack([np.ones_like(x), x])
+    try:
+        coefs, *_ = np.linalg.lstsq(X, y, rcond=None)
+    except np.linalg.LinAlgError:
+        return float("nan"), float("nan")
+    rho = float(coefs[1])
+    if rho <= 0 or rho >= 1:
+        return rho, float("nan")
+    return rho, float(-np.log(2) / np.log(rho))
+
+
+def plot_halflife_scatter(products: list[str], stats: pd.DataFrame
+                            ) -> tuple[go.Figure, pd.DataFrame]:
+    """Hurst × AR(1) half-life scatter, coloured by AR(1) ρ. Identifies
+    products with strong, fast mean-reversion in the mid level itself."""
+    rows = []
+    for p in products:
+        px_p, _ = load_product_px_tr(p)
+        if px_p.empty:
+            continue
+        rho, hl = _fit_ar1_halflife(px_p["mid"])
+        h = float("nan")
+        if not stats.empty and "hurst" in stats.columns:
+            mask = stats["product"] == p
+            if mask.any():
+                h = float(stats.loc[mask, "hurst"].iloc[0])
+        rows.append({"product": p, "hurst": h, "ar1_rho": rho, "half_life_ticks": hl})
+    df = pd.DataFrame(rows)
+    if df.empty:
+        return go.Figure(), df
+    plotted = df.dropna(subset=["hurst", "half_life_ticks"])
+    if plotted.empty:
+        return go.Figure(), df
+    fig = go.Figure(go.Scatter(
+        x=plotted["hurst"], y=plotted["half_life_ticks"], mode="markers+text",
+        text=plotted["product"], textposition="top center",
+        marker=dict(size=11, color=plotted["ar1_rho"], colorscale="RdBu_r",
+                    cmin=-1, cmax=1, showscale=True, colorbar=dict(title="AR(1) ρ")),
+        hovertemplate="%{text}<br>hurst=%{x:.3f}<br>half-life=%{y:.0f}<br>"
+                      "ρ=%{marker.color:+.3f}<extra></extra>",
+    ))
+    fig.add_hline(y=50, line_color="grey", line_dash="dash", line_width=0.5,
+                   annotation_text="50t = practical MR threshold",
+                   annotation_position="bottom right")
+    fig.add_vline(x=0.5, line_color="grey", line_dash="dash", line_width=0.5,
+                   annotation_text="hurst=0.5", annotation_position="top right")
+    fig.update_layout(height=480, margin=dict(t=40, b=30, l=10, r=10),
+                      xaxis_title="Hurst exponent",
+                      yaxis_title="AR(1) half-life of mid (ticks, log)",
+                      yaxis_type="log",
+                      title="Mean-reversion strength: hurst × half-life")
+    return fig, df
+
+
+def _ols_pair_spread(a: str, b: str) -> tuple[pd.Series, float, float]:
+    """OLS hedge: mid(a) = α + β·mid(b) + resid."""
+    panel = _aligned_multi_panel([a, b], "mid").dropna()
+    if panel.empty or a not in panel.columns or b not in panel.columns:
+        return pd.Series(dtype=float), float("nan"), float("nan")
+    x = panel[b].values
+    y = panel[a].values
+    X = np.column_stack([np.ones_like(x), x])
+    coefs, *_ = np.linalg.lstsq(X, y, rcond=None)
+    alpha, beta = float(coefs[0]), float(coefs[1])
+    return pd.Series(y - X @ coefs, index=panel.index), alpha, beta
+
+
+def plot_pair_spread(a: str, b: str, z_window: int = 200
+                      ) -> tuple[go.Figure, dict]:
+    """Pair-trade builder: OLS hedge a~b, plot residual + rolling z-score
+    with ±2σ bands. Annotate AR(1) ρ + half-life."""
+    from plotly.subplots import make_subplots
+    resid, alpha, beta = _ols_pair_spread(a, b)
+    if resid.empty:
+        return go.Figure(), {}
+    mu = resid.rolling(z_window, min_periods=20).mean()
+    sd = resid.rolling(z_window, min_periods=20).std()
+    z = (resid - mu) / sd
+    rho, hl = _fit_ar1_halflife(resid)
+    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.08,
+                         row_heights=[0.55, 0.45],
+                         subplot_titles=(
+                             f"OLS spread:  {a} = α + β·{b}    (α={alpha:+.3f}, β={beta:+.4f})",
+                             f"Rolling z-score (window={z_window})    "
+                             f"AR(1) ρ={rho:+.3f}, half-life≈{hl:.0f} ticks",
+                         ))
+    x = np.arange(len(resid))
+    fig.add_trace(go.Scattergl(x=x, y=resid.values, mode="lines",
+                                line=dict(color="black", width=0.7), showlegend=False),
+                   row=1, col=1)
+    if mu.notna().any():
+        fig.add_trace(go.Scattergl(x=x, y=mu.values, mode="lines",
+                                    line=dict(color="steelblue", width=0.7, dash="dot"),
+                                    showlegend=False), row=1, col=1)
+    fig.add_hline(y=0, line_color="grey", line_width=0.5, row=1, col=1)
+    fig.add_trace(go.Scattergl(x=x, y=z.values, mode="lines",
+                                line=dict(color="purple", width=0.8), showlegend=False),
+                   row=2, col=1)
+    for level, color, dash in [(2, "firebrick", "dash"), (-2, "firebrick", "dash"),
+                                (1, "grey", "dot"), (-1, "grey", "dot")]:
+        fig.add_hline(y=level, line_color=color, line_dash=dash, line_width=0.6,
+                       row=2, col=1)
+    fig.update_layout(height=560, margin=dict(t=70, b=30, l=10, r=10))
+    fig.update_yaxes(title="residual", row=1, col=1)
+    fig.update_yaxes(title="z-score", row=2, col=1)
+    fig.update_xaxes(title="aligned tick", row=2, col=1)
+    info = {"alpha": alpha, "beta": beta, "rho": rho, "half_life": hl,
+             "resid_std": float(resid.std()) if resid.notna().any() else float("nan"),
+             "n_aligned": int(len(resid))}
+    return fig, info
+
+
+def _compute_pca_returns(products: list[str]) -> tuple[pd.DataFrame, pd.DataFrame, np.ndarray]:
+    """PCA on standardised aligned ret_1 panel.
+    Returns (panel, loadings_df_top5, eigvals_descending)."""
+    panel = _aligned_multi_panel(products, "ret_1").dropna()
+    if panel.empty or panel.shape[1] < 2 or panel.shape[0] < 50:
+        return pd.DataFrame(), pd.DataFrame(), np.array([])
+    X = panel.values.astype(float)
+    Xs = (X - X.mean(axis=0)) / X.std(axis=0).clip(min=1e-9)
+    n = Xs.shape[0]
+    cov = Xs.T @ Xs / max(n - 1, 1)
+    eigvals, eigvecs = np.linalg.eigh(cov)
+    idx = np.argsort(eigvals)[::-1]
+    eigvals = eigvals[idx]
+    eigvecs = eigvecs[:, idx]
+    n_comp = min(5, eigvecs.shape[1])
+    loadings = pd.DataFrame(eigvecs[:, :n_comp],
+                             index=panel.columns,
+                             columns=[f"PC{i+1}" for i in range(n_comp)])
+    return panel, loadings, eigvals
+
+
+def plot_pca(loadings: pd.DataFrame, eigvals: np.ndarray) -> go.Figure:
+    from plotly.subplots import make_subplots
+    if loadings.empty or eigvals.size == 0:
+        return go.Figure()
+    explained = eigvals / max(eigvals.sum(), 1e-12)
+    n_show = min(5, len(eigvals))
+    fig = make_subplots(rows=1, cols=2, column_widths=[0.28, 0.72],
+                         subplot_titles=("Variance explained",
+                                          "Loadings on PC1 / PC2"))
+    fig.add_trace(go.Bar(x=[f"PC{i+1}" for i in range(n_show)],
+                          y=explained[:n_show],
+                          marker_color="steelblue", showlegend=False,
+                          text=[f"{v:.0%}" for v in explained[:n_show]],
+                          textposition="outside",
+                          hovertemplate="%{x}<br>variance=%{y:.1%}<extra></extra>"),
+                   row=1, col=1)
+    df = loadings.reset_index().rename(columns={"index": "product"})
+    fig.add_trace(go.Bar(x=df["product"], y=df["PC1"],
+                          marker_color="firebrick", name="PC1",
+                          hovertemplate="%{x}<br>PC1=%{y:+.3f}<extra></extra>"),
+                   row=1, col=2)
+    if "PC2" in df.columns:
+        fig.add_trace(go.Bar(x=df["product"], y=df["PC2"],
+                              marker_color="seagreen", name="PC2",
+                              hovertemplate="%{x}<br>PC2=%{y:+.3f}<extra></extra>"),
+                       row=1, col=2)
+    fig.add_hline(y=0, line_color="black", line_width=0.5, row=1, col=2)
+    fig.update_layout(height=420, margin=dict(t=60, b=100, l=10, r=10),
+                      barmode="group",
+                      legend=dict(orientation="h", y=1.05, x=1, xanchor="right"))
+    fig.update_xaxes(tickangle=-45, row=1, col=2)
+    fig.update_yaxes(title="loading", row=1, col=2)
+    fig.update_yaxes(title="fraction", row=1, col=1)
+    return fig
+
+
 def view_multi_product(arch: pd.DataFrame, stats: pd.DataFrame,
                        ic_long: pd.DataFrame, vol: pd.DataFrame):
     st.header("Multi-Product Analysis")
-    st.caption("Pick any subset of products across families. Get cross-product "
-               "correlations, lead-lag, stats, archetype mix, IC heatmap, and "
-               "overlaid distributions on the fly. Heavy ops scale with #products² — "
+    st.caption("Pick any subset across families and hunt alpha. **Descriptive** tabs "
+               "(stats, archetype, correlations, lead-lag, overlays) describe the "
+               "selection. **Alpha-discovery** tabs (Signal × Product IC, "
+               "Predictability scoreboard, OBI, Microprice, Mean-rev profile, Pair "
+               "builder, PCA) compute on the fly. Heavy ops scale with #products² — "
                "keep selection ≲ 15 for snappy interaction.")
 
     # ---- Selector ----
@@ -2010,11 +2403,17 @@ def view_multi_product(arch: pd.DataFrame, stats: pd.DataFrame,
     cols[5].metric("OBI", n_obi)
     cols[6].metric("MM", n_mm)
 
-    # ---- Tabs ----
-    tab_table, tab_arch, tab_corr, tab_ll, tab_overlay, tab_ic, tab_spikes = st.tabs(
-        ["Stats table", "Archetype mix", "Correlations",
-         "Lead-lag", "Overlays", "IC heatmap", "Vol spikes"]
-    )
+    # ---- Tabs (descriptive first, alpha-discovery after) ----
+    (tab_table, tab_arch, tab_corr, tab_ll, tab_overlay,
+     tab_alpha_ic, tab_score, tab_obi, tab_micro,
+     tab_mr, tab_pair, tab_pca, tab_spikes) = st.tabs([
+        "Stats table", "Archetype mix", "Correlations",
+        "Lead-lag", "Overlays",
+        "Signal × Product IC", "Predictability scoreboard",
+        "OBI predictiveness", "Microprice premium",
+        "Mean-rev profile", "Pair builder", "PCA factor",
+        "Vol spikes",
+    ])
 
     with tab_table:
         st.markdown("**Per-product stats** (subset of `stats_per_product.csv`)")
@@ -2126,7 +2525,11 @@ def view_multi_product(arch: pd.DataFrame, stats: pd.DataFrame,
                                                 x_title="std_50 (rolling 50-tick std of ret_1)"),
                              use_container_width=True)
 
-    with tab_ic:
+    with tab_alpha_ic:
+        st.caption("Heatmap rows = products, cols = signals (precomputed by the pipeline). "
+                    "Cell = IC at chosen horizon; `*` flags HAC p<0.05. Bright cells = "
+                    "tradeable signal at that horizon. Use this view first to find "
+                    "which signal × product combinations carry alpha.")
         if ic_long.empty:
             st.caption("No IC data available.")
         else:
@@ -2134,10 +2537,170 @@ def view_multi_product(arch: pd.DataFrame, stats: pd.DataFrame,
             if sub_ic.empty:
                 st.info("No IC rows for the selected products.")
             else:
-                st.plotly_chart(plot_family_ic_heatmap(sub_ic, HORIZONS),
-                                 use_container_width=True)
-                st.caption("Rows = (product | signal). Cols = horizons. "
-                           "Same scale as Family Drilldown.")
+                h_pick = st.select_slider("Horizon (ticks)",
+                                            options=list(HORIZONS),
+                                            value=10 if 10 in HORIZONS else HORIZONS[0],
+                                            key="mp_alpha_h")
+                st.plotly_chart(plot_signal_product_ic(sub_ic, selected, int(h_pick)),
+                                 use_container_width=True, key=f"mp_spi_{h_pick}")
+                with st.expander("Long-form IC heatmap (rows = product|signal)", expanded=False):
+                    st.plotly_chart(plot_family_ic_heatmap(sub_ic, HORIZONS),
+                                     use_container_width=True, key="mp_ic_long")
+
+    with tab_score:
+        st.caption("Per product: max |IC| achieved by ANY signal × horizon, plus the "
+                    "winning cell. n_significant_cells counts HAC + BH-FDR-passing cells. "
+                    "High max |IC| AND many significant cells ⇒ robust alpha across "
+                    "horizons rather than a single overfit lag.")
+        if ic_long.empty:
+            st.caption("No IC data available.")
+        else:
+            score = _predictability_score(ic_long, selected, HORIZONS)
+            top_n = st.slider("Show top N", 5, max(5, len(score)), min(30, len(score)),
+                              key="mp_score_n")
+            st.plotly_chart(plot_predictability_scoreboard(score, top_n=top_n),
+                             use_container_width=True)
+            with st.expander("Full table", expanded=False):
+                st.dataframe(score, use_container_width=True, hide_index=True)
+
+    with tab_obi:
+        st.caption("Order-book imbalance is the canonical HFT short-horizon predictor "
+                    "(Stoikov, Cartea-Jaimungal). Red curves are decile-mean fwd return "
+                    "at chosen horizon, with ±SE. A monotone increasing line ⇒ OBI "
+                    "predicts forward return at that horizon. A flat line ⇒ no edge.")
+        h_obi = st.select_slider("Forward horizon (ticks)",
+                                   options=list(HORIZONS), value=10 if 10 in HORIZONS else HORIZONS[0],
+                                   key="mp_obi_h")
+        max_panels = st.slider("Max products to render", 4, 24, min(16, len(selected)),
+                                key="mp_obi_max")
+        with st.spinner(f"Computing OBI panels at h={h_obi} ..."):
+            fig_obi = plot_obi_panel_grid(selected, horizon=int(h_obi), max_panels=max_panels)
+        st.plotly_chart(fig_obi, use_container_width=True, key=f"mp_obi_{h_obi}_{max_panels}")
+
+    with tab_micro:
+        st.caption("Microprice = (bid·ask_vol + ask·bid_vol)/(bid_vol + ask_vol). "
+                    "Premium = microprice − mid. Density mass concentrated above 0 ⇒ "
+                    "persistent buy-side pressure (and vice versa). Per Stoikov, this is "
+                    "a better short-horizon predictor than mid.")
+        with st.spinner("Loading raw px ..."):
+            fig = plot_microprice_premium(selected)
+        st.plotly_chart(fig, use_container_width=True)
+        # Per-product microprice premium → fwd_ret IC, computed on the fly
+        with st.expander("Microprice premium → fwd_ret IC (computed on the fly)",
+                          expanded=False):
+            h_mp = st.select_slider("Horizon", options=list(HORIZONS),
+                                      value=10 if 10 in HORIZONS else HORIZONS[0],
+                                      key="mp_micro_h")
+            rows = []
+            for p in selected:
+                px_p, _ = load_product_px_tr(p)
+                if px_p.empty or "microprice" not in px_p.columns:
+                    continue
+                col_fwd = f"fwd_{h_mp}"
+                if col_fwd not in px_p.columns:
+                    continue
+                prem = (px_p["microprice"] - px_p["mid"])
+                joined = pd.concat([prem.rename("prem"), px_p[col_fwd].rename("fwd")],
+                                     axis=1).dropna()
+                if len(joined) < 100 or joined["prem"].std() == 0:
+                    continue
+                ic = float(joined["prem"].corr(joined["fwd"]))
+                rows.append({"product": p, "n": int(len(joined)), "ic": ic,
+                              "abs_ic": abs(ic)})
+            if rows:
+                df = pd.DataFrame(rows).sort_values("abs_ic", ascending=False)
+                fig2 = go.Figure(go.Bar(
+                    y=df["product"], x=df["ic"], orientation="h",
+                    marker_color=["#2ca02c" if v > 0 else "#d62728" for v in df["ic"]],
+                    text=[f"{v:+.3f}" for v in df["ic"]], textposition="outside",
+                    hovertemplate="%{y}<br>IC=%{x:+.4f}<br>n=%{customdata[0]}<extra></extra>",
+                    customdata=df[["n"]].values,
+                ))
+                fig2.add_vline(x=0, line_color="black", line_width=1)
+                fig2.update_layout(height=max(280, 22 * len(df) + 80),
+                                   margin=dict(t=20, b=20, l=10, r=10),
+                                   xaxis_title=f"corr(microprice − mid, fwd_{h_mp})",
+                                   title=f"Microprice premium → fwd_{h_mp} IC")
+                st.plotly_chart(fig2, use_container_width=True, key=f"mp_micro_ic_{h_mp}")
+            else:
+                st.info("Not enough data to compute IC for any selected product.")
+
+    with tab_mr:
+        st.caption("**Variance ratio** discriminates regimes — VR(k)<1 ⇒ mean-revert, "
+                    ">1 ⇒ momentum, =1 ⇒ random walk (Lo–MacKinlay). "
+                    "**Half-life** comes from AR(1) on the mid: products with low half-life "
+                    "AND ρ in (0,1) are tradeable mean-reverters.")
+        sub_tabs = st.tabs(["Variance-ratio profile", "Half-life vs Hurst"])
+        with sub_tabs[0]:
+            with st.spinner("Computing variance-ratio profile ..."):
+                fig = plot_vr_profile(selected)
+            st.plotly_chart(fig, use_container_width=True)
+        with sub_tabs[1]:
+            with st.spinner("Fitting AR(1) on each mid series ..."):
+                fig, df_hl = plot_halflife_scatter(selected, sub_stats)
+            st.plotly_chart(fig, use_container_width=True)
+            with st.expander("Half-life table", expanded=False):
+                st.dataframe(df_hl, use_container_width=True, hide_index=True)
+
+    with tab_pair:
+        st.caption("Build any cross-product spread on the fly: OLS hedge `a = α + β·b`, "
+                    "rolling z-score, AR(1) half-life of residual. **z-score regularly "
+                    "crossing ±2 with stable mid + low half-life ⇒ tradeable pair.** "
+                    "Half-life > a few hundred ticks or |ρ| close to 1 ⇒ residual is "
+                    "non-stationary, NOT a pair.")
+        c1, c2, c3 = st.columns([2, 2, 1])
+        if len(selected) >= 2:
+            default_a = selected[0]
+            default_b = selected[1]
+        else:
+            default_a = ALL_PRODUCTS[0]
+            default_b = ALL_PRODUCTS[1]
+        with c1:
+            a = st.selectbox("Leg A", ALL_PRODUCTS,
+                             index=ALL_PRODUCTS.index(default_a),
+                             key="mp_pair_a")
+        with c2:
+            b = st.selectbox("Leg B", ALL_PRODUCTS,
+                             index=ALL_PRODUCTS.index(default_b),
+                             key="mp_pair_b")
+        with c3:
+            zw = st.number_input("z-window", min_value=20, max_value=2000,
+                                  value=200, step=20, key="mp_pair_zw")
+        if a == b:
+            st.warning("Pick two different products.")
+        else:
+            with st.spinner("Computing OLS hedge + z-score ..."):
+                fig, info = plot_pair_spread(a, b, z_window=int(zw))
+            if info:
+                k1, k2, k3, k4, k5 = st.columns(5)
+                k1.metric("β", f"{info['beta']:+.4f}")
+                k2.metric("AR(1) ρ", f"{info['rho']:+.3f}")
+                hl_disp = f"{info['half_life']:.0f}t" if pd.notna(info["half_life"]) else "∞"
+                k3.metric("Half-life", hl_disp)
+                k4.metric("Resid σ", f"{info['resid_std']:.3f}")
+                k5.metric("Aligned ticks", f"{info['n_aligned']:,}")
+            st.plotly_chart(fig, use_container_width=True, key=f"mp_pair_{a}_{b}_{zw}")
+
+    with tab_pca:
+        st.caption("PCA on standardised ret_1 panel. **PC1 captures the common factor** "
+                    "across selected products. Products with small |PC1 loading| have "
+                    "idiosyncratic returns ⇒ candidate for residual / spread trades. "
+                    "Cumulative variance below ~70% on PC1 means returns are not "
+                    "co-moving — pair / cluster opportunities scarce.")
+        if len(selected) < 2:
+            st.info("Select at least 2 products for PCA.")
+        else:
+            with st.spinner("Computing PCA ..."):
+                _, loadings, eigvals = _compute_pca_returns(selected)
+            if loadings.empty:
+                st.info("Not enough aligned data for PCA.")
+            else:
+                st.plotly_chart(plot_pca(loadings, eigvals), use_container_width=True)
+                # Loadings table sorted by |PC1|
+                show = loadings.copy()
+                show["|PC1|"] = show["PC1"].abs()
+                show = show.sort_values("|PC1|", ascending=False)
+                st.dataframe(show, use_container_width=True, height=320)
 
     with tab_spikes:
         spike_sum = load_spike_summary()
