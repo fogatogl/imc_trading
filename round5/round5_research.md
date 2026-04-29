@@ -139,7 +139,7 @@ Once each family report is generated, rank by edge density (# of flagged ideas i
 | PEBBLES       | — | — | — | — |
 | ROBOT         | — | — | — | — |
 | UV_VISOR      | — | — | — | — |
-| TRANSLATOR    | — | — | — | — |
+| TRANSLATOR    | NONE | OBI_L3 fade IC=-0.04 (statistically significant, economically untradeable) | — | Books engineered balanced (bid_vol_1==ask_vol_1 in 90%+ of snapshots, std(obi)=0.012, \|obi\|≥0.15 fires 0% of ticks). Predicted h=1 move at max realistic obi ≈ 3 ticks vs half-spread ≈ 4.5. BT confirms 0 trades, 0 PnL on days 5-{2,3,4}. Excluded from active bundle. Experiment file deleted (was `strat_translator_obi_taker.py`). |
 | PANEL         | — | — | — | — |
 | OXYGEN_SHAKE  | — | — | — | — |
 | SNACKPACK     | — | — | — | — |
@@ -281,3 +281,151 @@ Three distinct mechanisms, each with an opposite trading prescription:
 | **Total** | spike layer alone | **≈ +27 k SS / 3 days** |
 
 Per spike event ≈ +96 SS (after spread cost). Limit=10 binds size. Caveats — small n on the FOLLOW side (5/10/18 events × 3 products), independent-events assumption (collisions are rare given inter-arrival ≫ h=20), and conservative taker semantics need to be revalidated through `prosperity4bt` before live submission.
+
+### Spike strategy — per-day positivity gate + final implementation
+
+Per [`feedback_per_day_positive_selection`](../../../.claude/projects/c--Users-fogat-Desktop-imc-trading/memory/feedback_per_day_positive_selection.md), products that lose on any single day's BT are rejected. Pipeline `spike_strategy_pnl.csv` aggregates 3 days; built [`round5/spike_per_day_check.py`](spike_per_day_check.py) to slice events by day and recompute mid-based PnL @ h=20.
+
+**Per-day mid-based PnL @ h=20** (sign-only gate, 10× position):
+
+| Product | Side | D2 | D3 | D4 | Verdict |
+|---|---|---:|---:|---:|---|
+| ROBOT_DISHES | FADE | +340 (n=1) | — (n=0) | +57,635 (n=116) | **KEEP** |
+| ROBOT_IRONING | FADE | +18,540 (n=48) | +600 (n=2) | — (n=0) | **KEEP** |
+| OXYGEN_SHAKE_CHOCOLATE | FADE | +5,965 (n=14) | +730 (n=2) | +20,965 (n=44) | KEEP-mid (taker dominated by spread; see below) |
+| OXYGEN_SHAKE_EVENING_BREATH | FADE | +22,995 (n=54) | **−200 (n=2)** | — (n=0) | DROP |
+| MICROCHIP_TRIANGLE | FADE | +3,970 (n=13) | +360 (n=2) | **−1,050 (n=2)** | DROP |
+| MICROCHIP_SQUARE | FOLLOW | +4,280 (n=7) | **−805 (n=2)** | +2,300 (n=1) | DROP |
+| MICROCHIP_RECTANGLE | FOLLOW | +1,140 (n=16) | +710 (n=1) | **−465 (n=1)** | DROP |
+| MICROCHIP_OVAL | FOLLOW | +640 (n=1) | +825 (n=2) | **−260 (n=2)** | DROP |
+
+Output: [`round5/reports/CROSS/vol_spikes/per_day_pnl.csv`](reports/CROSS/vol_spikes/per_day_pnl.csv).
+
+**Note on the small-n DROPs**: RECTANGLE/OVAL/TRIANGLE/SQUARE/EVENING_BREATH all fail on a day with 1–2 events. With n that small, single-event noise dominates. Strict gate is honored, but this is effectively a sample-size filter — relaxation candidate if user accepts higher live-overfit risk.
+
+**OXYGEN_SHAKE_CHOCOLATE FADE caveat**: passes mid-based gate (D2/D3/D4 all positive). However per [`spike_mechanism_report.md`](reports/CROSS/vol_spikes/anatomy/spike_mechanism_report.md), spread = 12 ticks vs typical jump = 10 ticks → taker pays the spread to harvest a smaller move. Aggregate sim PnL @ h=20 = −1,240 SS (loss after spread). Not deployed as taker.
+
+**OXYGEN_SHAKE maker variant rejected** (post-spike passive on the fade side). Direction analysis: after up-spike, fade = SHORT, requires resting ASK that fills via aggressor BUYERS. Reversion = aggressor SELLERS hitting BIDS. The two flows don't intersect — a passive ASK posted after an up-spike is orphan during reversion. Continuous two-sided MM (which captures the spike when an aggressor crosses the *pre-existing* quote) is what works on these — that's an MM-strat job, not a spike-conditional one. Submission `550714` already MMs OXY_*.
+
+### Final spike trader (folded into combined v7)
+
+Surviving spike products: **ROBOT_DISHES + ROBOT_IRONING** (FADE taker, h=20, 4σ spike). Standalone source `strat_spike_takers_multi.py` was consolidated into [`strats/strat_combined_v7_spike.py`](strats/strat_combined_v7_spike.py) (current best). MICROCHIP_SQUARE follow variant rejected — failed D3 per-day gate (−805 on n=2).
+
+Standalone backtest (before consolidation):
+
+| Engine | D2 | D3 | D4 | Total |
+|---|---:|---:|---:|---:|
+| Python `prosperity4bt` | +7,659 | +452 | +16,058 | **+24,169** |
+| Rust `rust_backtester` | +7,659 | +452 | +16,058 | **+24,169** |
+
+Δ = 0 %. Strict per-day positive: ✅ (all 3 days ≥ 0). Apply round-5 BT inflation budget (`feedback_bt_inflation_round5_mm` ≈ 10 %): live realisation projection ≈ +2.4 k SS / day. Spike taker is event-driven (~167 events / 3 days) rather than continuous MM, so true inflation profile may differ — record live ratio at first submission.
+
+**Open items** (not in scope of current submission, but on the list):
+- Relaxed-gate variant: total positive AND ≤ 1 losing day → would re-include MICROCHIP_TRIANGLE FADE (+3.3k total, only D4 −1.0k on n=2).
+- Per-day OXYGEN_SHAKE *MM* (not spike-conditional) — already covered by `550714`; verify it captures spike crossings of pre-existing quotes.
+
+## How to use the live submission folders
+
+The numbered folders under `round5/` (`549159/`, `555509/`, `556852/`,
+`558897/`, `560161/`) each contain the trader `.py` actually submitted plus
+the platform-returned `.json` and `.log` from the live D5 run. Treat them
+as **ground-truth telemetry** for what filled, when, and at what price on
+the live day — useful for inspecting per-trade timing and price movements
+through the kevin-fu1 visualizer or the dashboard.
+
+**Do NOT use them as input to optimize / select strategies.** The 3-day BT
+on `dataset/ROUND_5/prices_round_5_day_{2,3,4}.csv` is the only sample
+where re-running with different parameters is cheap; the live D5 file is a
+fixed n=1 outcome that gets overfit the moment it drives a parameter
+choice. Concrete pitfall: 556502 retuned SNACKPACK / added PIS-fade based
+on inspecting 555509's live D5 trades and lost ≈3k vs 555509 on the next
+live day. Per `feedback_alpha_not_backtest` and
+`feedback_bt_inflation_round5_mm`, structural alpha is the gate; live
+results are post-hoc validation.
+
+**Cleaned (2026-04-29)**: only winning per-family submission folders are
+retained. `556502/` (v6, retuned SNACKPACK overfit), `556665/` (early SNK
+pair experiment, superseded by 556852), `559949/` (PANEL naive MM, live
+−3,155 per `feedback_naive_mm_no_trend_defense`) were removed; their
+lessons are summarized below and in feedback memories.
+
+## MM submission history (round-5 multi-product MM)
+
+Iterative path from `mr_tune.py` → v6, with live results. All iteration files
+were removed during cleanup (2026-04-29); the lessons live here and in
+`feedback_bt_inflation_round5_mm`.
+
+| Submission | Strategy | BT (3-day) | Live D5 | Inflation | Notes |
+|---|---|---:|---:|---:|---|
+| 550714 | v3 (mm_multi_v3 + early OBI grafts) | 147,189 | +1,623 | 1.1% | First multi-product try; OBI overfit, tiny live |
+| 555509 | v5 + 3 teammate edits (drop DARK_MATTER, FAMILLE-restricted INV_TAPER) | 241,080 | +21,881 | 9.1% | Adds slp_cp pair, PEBBLES star-XL, SLEEP_POD_COTTON. Largest unlock |
+| 556502 | v6 (= 555509 + drop ASTRO_BLACK + SP ENTER_Z 1.6 + SP INV_SKEW 0.5 + PIS-fade) | 244,534 | +18,899 | 7.7% | BT+3,454 → live −2,982. SP retuning + PIS-fade overfit; only ASTRO drop validated |
+| (next) | combined_v7_spike (= v5 base − ASTRO_BLACK − DARK_MATTER + spike taker DISHES/IRONING) | 261,138 | (pending) | est. ~9% | Reverts v6 BT-tuning, adds spike layer (+24k BT). Both engines Δ=0 % |
+
+**Lessons baked into v7:**
+- Drop ASTRO_BLACK (−470 in 555509, −284 in 550714 — consistent live loser)
+- Drop DARK_MATTER (−1,295 in 550714)
+- Keep SNACKPACK ENTER_Z=2.0 + INV_SKEW=1.5 (default) — v6's 1.6/0.5 retune cost live
+- No PIS-fade — UNIT=2 contributed ≈0 live
+- Keep PEBBLES star-XL topology (high-variance: +1,699 D5 in 555509, −588 D5 in 556502 on PEBBLES_S — same code; accept variance, don't redesign on n=2 days)
+- Keep INV_TAPER global at 0.9 (rarely fires, defensive)
+
+**Files removed (2026-04-29 cleanup) — preserved here for traceability:**
+- `strat_mm_multi.py` / `_v2` / `_v3` / `_v4` / `_v5` / `_v6` (iteration history)
+- `mr_tune.py` (pre-v3 base)
+- `strat_pairs_basket_*.py` family (multi/pisfade/tune/v2/volaware/snackpack/snackpack_basket/snackpack_maker/coint/maker_multi) — pair experiments, all merged into v6/v7 PAIRS list
+- `strat_spike_takers_multi.py`, `strat_spike_fade_robot_dishes.py`, `strat_spike_fade_robot_ironing.py`, `strat_spike_follow_microchip_square.py`, `strat_taker_robot_dishes.py` — folded into combined v7
+- `strat_mm_snackpack.py`, `strat_mr_zscore_multi.py`, `strat_translator_obi_taker.py`, `MR_dishes.py` — single-family experiments, superseded
+- 2026-04-29 follow-up: `strat_microchip_naive_mm.py` / `_smart_mm.py` (superseded by 560161 hybrid), `strat_panel_naive_mm.py` / `_v2_skew` / `_v3_obigate` / `_v4_trend` / `_mr_zscore` (PANEL family lost live, only `_v5_postrend.py` kept as reference for trend-defended naive MM), `strat_pebbles_only_555mm.py` (superseded by `_556mm`), losing submission dirs `556502/`, `556665/`, `559949/`
+
+---
+
+## Live results — best per family (D4) + improvement potential
+
+Inspected 6 submissions (`549159 / 555509 / 556502 / 556665 / 556852 / 556909` + retired `557541`). All single live day = D4. Stacking rule: combine across submissions only when products are independent (single-product MM or naive maker). Multi-leg pair baskets (PEBBLES star, SNACKPACK basket, slp_cp pair) cannot be sliced.
+
+| Family | Best PnL | Source | Products contributing |
+|---|---:|---|---|
+| PEBBLES | **+10,428** | 557541 (PEB-only, tight MM + 4-pair star) | all 5 (paired) |
+| SLEEP_POD | **+9,710** | 555509 (slp_cp + COT/POL/NYL MM) | COT, POL, NYL |
+| SNACKPACK | **+4,546** | 556852 (4-pair basket) | all 5 (paired) |
+| TRANSLATOR | **+4,832** | 549159 ⊕ 556909 | MIST +1,991 / BLUE +1,920 / ASTRO +921 |
+| ROBOT | **+4,165** | 549159 ⊕ 556909 | IRON +1,508 / MOP +1,457 / VAC +1,200 |
+| OXYGEN_SHAKE | **+3,497** | 549159 ⊕ 556909 | CHOC +2,230 / GARLIC +1,267 |
+| GALAXY_SOUNDS | **+3,441** | 555509 ⊕ 549159 | BH +2,229 / FLAMES +1,212 |
+| UV_VISOR | **+8,640** | 558897 | ORANGE +4,124 / RED +3,822 / MAGENTA +695 (drop YELLOW −214) |
+| MICROCHIP | **+1,792** | 556909 ⊕ 549159 | TRI +1,528 / CIRCLE +264 |
+| PANEL | 0 | none | not traded |
+| **TOTAL** | **+51,051** | | |
+
+### Untouched products (improvement headroom)
+
+22 of 50 products have never been traded across any inspected submission. Highest upside categories ranked by untouched-product count:
+
+| Family | Untouched | Products |
+|---|---:|---|
+| **PANEL** | **5/5** | 1X2, 1X4, 2X2, 2X4, 4X4 — entire category unexplored |
+| UV_VISOR | 1/5 | AMBER (558897 added ORANGE/RED/MAGENTA/YELLOW — YELLOW loses −214, drop) |
+| MICROCHIP | 3/5 | OVAL, RECTANGLE, SQUARE |
+| GALAXY_SOUNDS | 3/5 | DARK_MATTER, PLANETARY_RINGS, SOLAR_WINDS |
+| OXYGEN_SHAKE | 2/5 | MINT, MORNING_BREATH |
+| SLEEP_POD | 2/5 | LAMB_WOOL, SUEDE |
+| TRANSLATOR | 2/5 | ECLIPSE_CHARCOAL, SPACE_GRAY |
+| ROBOT | 1/5 | DISHES (DARK_MATTER -1,295 in 550714, ROBOT_DISHES "problématique" per 555509) |
+
+### Where to spend research effort next
+
+Highest priority — products with naive-MM-friendly profile but never quoted:
+1. **PANEL family** — 5 untouched. Even +500 each via naive top-of-book MM could add +2.5k. Run pipeline `family_report.py --family PANEL` first.
+2. **MICROCHIP (3 untouched)** — TRIANGLE +1,528 and CIRCLE +264 work. OVAL/SQUARE/RECT may stack similarly.
+3. **UV_VISOR_AMBER** — last unexplored UV product. Sister products RED +3,822 and MAGENTA +695 confirm family is naive-MM-friendly. Likely +500-3k upside.
+
+**UV_VISOR — proven recipe (558897, scale up):**
+Naive top-of-book MM, `qty = remaining capacity` (not qty=1 like 549159), `spread ≥ 2` gate to avoid crossed quotes. ORANGE went from +2,697 (qty=1, 549159) → +4,124 (qty=cap, 558897) — qty=cap captures more fills on the same book. Apply this scaled recipe to other naive-MM families (PANEL, MIC OVAL/SQUARE/RECT, UV AMBER).
+
+Lower priority — variance-bound:
+- SNACKPACK / PEBBLES baskets are at integration optimum on this single live day. Re-tuning paired strategies on n=1 is overfit risk.
+- OXYGEN_SHAKE_GARLIC swung from −1,391 to +1,267 across submissions of similar strategy class — variance dominates. Don't over-tune.
+- TRANSLATOR_ASTRO_BLACK flipped from −470 to +921 same way. Single-day signal is noise-dominated for these.
+
+**Caveat:** all numbers are single-day (D4). Treat ranking as suggestive, not statistical. The +45,108 ceiling assumes a single submission could combine the disjoint-product blocks — operationally feasible only by merging the source code (e.g. 549159's naive MM target_products list ⊕ 555509's MR_OTHER MM ⊕ 556852's PEB+SNK pair logic).
