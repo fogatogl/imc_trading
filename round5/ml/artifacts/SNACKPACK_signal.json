@@ -1,0 +1,45 @@
+{
+  "kind": "simple_signal",
+  "family": "SNACKPACK",
+  "product": "SNACKPACK_VANILLA",
+  "signal": "neg_spread",
+  "horizon": 100,
+  "live_haircut": 0.3,
+  "entry_buffer": 0.0,
+  "feature_means": [
+    -16.867542087542088
+  ],
+  "feature_stds": [
+    1.614068103949841
+  ],
+  "coefs": [
+    1.6102046814201982
+  ],
+  "intercept": 1.1873905723905724,
+  "block_pnl": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    76.0,
+    9.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "total_pnl": 85.0,
+  "block_sharpe": 0.28919380413128964,
+  "n_trades": 3,
+  "ml_gate_failure": {
+    "passed": false,
+    "reason": "too_few_trades n=0 < 30",
+    "n_trades": 0,
+    "block_pnl_total": 0.0
+  }
+}

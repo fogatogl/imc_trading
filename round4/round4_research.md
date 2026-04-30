@@ -698,6 +698,61 @@ Files removed (2026-04-27 after sign-off):
 Live A/B candidate order: `hp10010eu` (max BT signal) → `hp10010aoq3`
 (swap if gap-style behaviour appears live).
 
+### 5.6 Live `aoq3` test (511631) + assessment upgrades (2026-04-27)
+
+Live `aoq3` (single day, R4): HP +1,638. PnL path 0 → −2,745 → +1,638.
+First positive R4-live hydrogel result (vs principled −782).
+
+Live HP mid stats: mean 10033.5, median 10037.5, std 14.1, slope
++0.035/tick (~+35 ticks per 1k ticks). BT D1 slope +0.008. Live
+distribution is *both* higher-mean *and* steeper-trending than any BT day.
+
+Diagnostic upgrades (run on aoq3 BT log, not used for tuning):
+
+1. **Counterparty attribution.** `<book>` fills (mostly our sells, n=386)
+   drift −6.67 ticks against us at +5 ticks; Mark 38 fills (mostly our
+   buys, n=218) drift +3.51 *for* us. Asymmetric edge by counterparty.
+2. **Per-tier P&L (BT).** Maker tier `|dev|>14` is the alpha source: 92
+   fills, +1.1M cash. Shark tier (374 fills) is the entry leg. Always-on
+   unwind tier (138 fills) ~neutral.
+3. **Position-time profile (BT).** 43% of all ticks at `|pos|≥90`; 60%
+   on D1/D3. Anchor mismatch is structural, not tuning.
+4. **BT-window match to live.** Closest 1k-tick BT window to live D3
+   distribution earned +1,613 / 1k ticks. Top-10 BT match mean is
+   +4,083 / 1k. Live earned +1,638 / 10k ticks. Live shortfall ≈ 10×
+   even after shape-matching — unexplained by distribution alone.
+
+Identified next-step lever: CP-conditioned maker quoting.
+
+### 5.7 CP-flow-gated maker tier (2026-04-27, ruled out)
+
+`trader_hp10010cp_hydrogel.py` — aoq3 base + structural maker-tier sizing
+by aggressor flow imbalance from `state.market_trades`. Continuous size
+scaling (no threshold), L5-compliant.
+
+Attribution control (vs aoq3, same base, same days):
+- Python BT: 81,847 vs 82,379 → −532. Sub-noise.
+- Rust BT: 82,030 vs 82,030 → 0.
+
+No BT lift. Per `feedback_external_signal_redundancy`, ruled out and
+removed.
+
+### 5.8 Principled-only inventory (2026-04-27)
+
+After cleanup, hydrogel files retained:
+- `trader_principled_hydrogel.py` — canonical (anchor 9999, HP_LIMIT 100)
+- `trader_baseline_hydrogel.py` — R3 winner verbatim, control
+- `trader_v9_revconfirm_hydrogel.py` — reversion-confirmed entry gate
+- `trader_hp10010eu_hydrogel.py` — best BT (+13.6% vs principled)
+- `trader_hp10010aoq3_hydrogel.py` — live-validated +1,638 single-day
+
+Removed (not principled or not best):
+- `trader_gridbest_hydrogel.py` (3-day-fitted; own docstring flags this).
+- `trader_hp_multilevel_take.py` (untested experimental deep-take tier).
+- `trader_hp10010cp_hydrogel.py` (CP-flow gate, no BT lift).
+- `trader_m22fade_hydrogel.py` (CP-targeted but on stale 9999 anchor;
+  BT 57k << 83k for `_eu`).
+
 ---
 
 ## 6. North star

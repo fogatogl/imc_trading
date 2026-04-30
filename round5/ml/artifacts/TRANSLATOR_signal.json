@@ -1,0 +1,54 @@
+{
+  "kind": "simple_signal",
+  "family": "TRANSLATOR",
+  "product": "TRANSLATOR_VOID_BLUE",
+  "signal": "obi_l3",
+  "horizon": 100,
+  "live_haircut": 0.3,
+  "entry_buffer": 0.0,
+  "feature_means": [
+    9.156800443033494e-06
+  ],
+  "feature_stds": [
+    0.012448734378717541
+  ],
+  "coefs": [
+    -0.3608462598252882
+  ],
+  "intercept": 5.166464646464647,
+  "block_pnl": [
+    45.0,
+    19.0,
+    5.0,
+    203.0,
+    0.0,
+    585.0,
+    48.0,
+    1.0,
+    58.0,
+    -106.0,
+    99.0,
+    0.0,
+    325.0,
+    -423.0,
+    -226.0
+  ],
+  "total_pnl": 633.0,
+  "block_sharpe": 0.18589504412222535,
+  "n_trades": 101,
+  "ml_gate_failure": {
+    "passed": false,
+    "n_trades": 41,
+    "g1_trade_edge": false,
+    "g1_win_rate": 0.4878048780487805,
+    "g1_mean_net": 0.7560975609756098,
+    "g1_threshold_win_rate": 0.55,
+    "g2_block_sharpe": false,
+    "g2_sharpe_value": 0.04608310955436461,
+    "g2_threshold": 1.0,
+    "g3_per_day_pnl": false,
+    "g4_beats_baseline": false,
+    "block_pnl_total": 31.0,
+    "block_pnl_n": 15
+  }
+}

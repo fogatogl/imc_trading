@@ -1,0 +1,642 @@
+[
+  {
+    "target": "fwd_ret",
+    "horizon": 50,
+    "model": "ridge",
+    "product": "ROBOT_DISHES",
+    "vol_gate_q": 5,
+    "fold": "D2+D3->D4",
+    "gate": {
+      "passed": false,
+      "cond1_edge_dominance": false,
+      "cond1_median_excess": -2.1241856278608076,
+      "cond1_frac_edge_clears_half_spread": 0.1540960308598112,
+      "cond2_per_day_positive_ic": false,
+      "cond2_per_day_ic": {
+        "4": -0.011898597786040816
+      },
+      "cond3_per_day_positive_pnl": false,
+      "cond3_per_day_pnl": {
+        "4": -32760.0
+      },
+      "cond4_trend_defense": true,
+      "cond4_quintile_pnl": {
+        "0": -9365.0,
+        "1": -3430.0,
+        "2": -14805.0,
+        "3": -3340.0,
+        "4": -1820.0
+      },
+      "live_haircut": 0.3,
+      "edge_clear_min_frac": 0.15
+    }
+  },
+  {
+    "target": "fwd_ret",
+    "horizon": 50,
+    "model": "lgbm",
+    "product": "ROBOT_DISHES",
+    "vol_gate_q": 5,
+    "fold": "D2+D3->D4",
+    "gate": {
+      "passed": false,
+      "cond1_edge_dominance": true,
+      "cond1_median_excess": 3.1304335438563697,
+      "cond1_frac_edge_clears_half_spread": 0.7073393564105167,
+      "cond2_per_day_positive_ic": false,
+      "cond2_per_day_ic": {
+        "4": -0.13262419369667003
+      },
+      "cond3_per_day_positive_pnl": false,
+      "cond3_per_day_pnl": {
+        "4": -64790.0
+      },
+      "cond4_trend_defense": true,
+      "cond4_quintile_pnl": {
+        "0": -9540.0,
+        "1": -17245.0,
+        "2": -7215.0,
+        "3": -19500.0,
+        "4": -11290.0
+      },
+      "live_haircut": 0.3,
+      "edge_clear_min_frac": 0.15
+    }
+  },
+  {
+    "target": "fwd_ret",
+    "horizon": 100,
+    "model": "ridge",
+    "product": "ROBOT_DISHES",
+    "vol_gate_q": 5,
+    "fold": "D2+D3->D4",
+    "gate": {
+      "passed": false,
+      "cond1_edge_dominance": false,
+      "cond1_median_excess": -1.0016604846468025,
+      "cond1_frac_edge_clears_half_spread": 0.3720028568513417,
+      "cond2_per_day_positive_ic": true,
+      "cond2_per_day_ic": {
+        "4": 0.036161645533119506
+      },
+      "cond3_per_day_positive_pnl": false,
+      "cond3_per_day_pnl": {
+        "4": -54250.0
+      },
+      "cond4_trend_defense": true,
+      "cond4_quintile_pnl": {
+        "0": -14335.0,
+        "1": -5605.0,
+        "2": -16515.0,
+        "3": -14705.0,
+        "4": -3090.0
+      },
+      "live_haircut": 0.3,
+      "edge_clear_min_frac": 0.15
+    }
+  },
+  {
+    "target": "fwd_ret",
+    "horizon": 100,
+    "model": "lgbm",
+    "product": "ROBOT_DISHES",
+    "vol_gate_q": 5,
+    "fold": "D2+D3->D4",
+    "gate": {
+      "passed": false,
+      "cond1_edge_dominance": true,
+      "cond1_median_excess": 7.417984389178951,
+      "cond1_frac_edge_clears_half_spread": 0.8175696357514539,
+      "cond2_per_day_positive_ic": false,
+      "cond2_per_day_ic": {
+        "4": -0.12458043396753188
+      },
+      "cond3_per_day_positive_pnl": false,
+      "cond3_per_day_pnl": {
+        "4": -70740.0
+      },
+      "cond4_trend_defense": true,
+      "cond4_quintile_pnl": {
+        "0": -16660.0,
+        "1": -11480.0,
+        "2": -12695.0,
+        "3": -19460.0,
+        "4": -10445.0
+      },
+      "live_haircut": 0.3,
+      "edge_clear_min_frac": 0.15
+    }
+  },
+  {
+    "target": "fwd_ret",
+    "horizon": 50,
+    "model": "ridge",
+    "product": "ROBOT_IRONING",
+    "vol_gate_q": 5,
+    "fold": "D2+D3->D4",
+    "gate": {
+      "passed": false,
+      "cond1_edge_dominance": true,
+      "cond1_median_excess": 2.3993685577555537,
+      "cond1_frac_edge_clears_half_spread": 0.7811389706628769,
+      "cond2_per_day_positive_ic": false,
+      "cond2_per_day_ic": {
+        "4": -0.024299000247851685
+      },
+      "cond3_per_day_positive_pnl": false,
+      "cond3_per_day_pnl": {
+        "4": -44770.0
+      },
+      "cond4_trend_defense": false,
+      "cond4_quintile_pnl": {
+        "0": -1560.0,
+        "1": -7060.0,
+        "2": -9390.0,
+        "3": -11410.0,
+        "4": -15350.0
+      },
+      "live_haircut": 0.3,
+      "edge_clear_min_frac": 0.15
+    }
+  },
+  {
+    "target": "fwd_ret",
+    "horizon": 50,
+    "model": "lgbm",
+    "product": "ROBOT_IRONING",
+    "vol_gate_q": 5,
+    "fold": "D2+D3->D4",
+    "gate": {
+      "passed": false,
+      "cond1_edge_dominance": true,
+      "cond1_median_excess": 3.958989926503377,
+      "cond1_frac_edge_clears_half_spread": 0.7648969647751497,
+      "cond2_per_day_positive_ic": true,
+      "cond2_per_day_ic": {
+        "4": 0.08025113129894144
+      },
+      "cond3_per_day_positive_pnl": false,
+      "cond3_per_day_pnl": {
+        "4": -45870.0
+      },
+      "cond4_trend_defense": true,
+      "cond4_quintile_pnl": {
+        "0": -4440.0,
+        "1": -4400.0,
+        "2": -12400.0,
+        "3": -14705.0,
+        "4": -9925.0
+      },
+      "live_haircut": 0.3,
+      "edge_clear_min_frac": 0.15
+    }
+  },
+  {
+    "target": "fwd_ret",
+    "horizon": 100,
+    "model": "ridge",
+    "product": "ROBOT_IRONING",
+    "vol_gate_q": 5,
+    "fold": "D2+D3->D4",
+    "gate": {
+      "passed": false,
+      "cond1_edge_dominance": true,
+      "cond1_median_excess": 7.425144437264354,
+      "cond1_frac_edge_clears_half_spread": 0.9153147637996123,
+      "cond2_per_day_positive_ic": false,
+      "cond2_per_day_ic": {
+        "4": -0.04467385207798898
+      },
+      "cond3_per_day_positive_pnl": false,
+      "cond3_per_day_pnl": {
+        "4": -32940.0
+      },
+      "cond4_trend_defense": false,
+      "cond4_quintile_pnl": {
+        "0": 380.0,
+        "1": -1495.0,
+        "2": -7345.0,
+        "3": -6600.0,
+        "4": -17880.0
+      },
+      "live_haircut": 0.3,
+      "edge_clear_min_frac": 0.15
+    }
+  },
+  {
+    "target": "fwd_ret",
+    "horizon": 100,
+    "model": "lgbm",
+    "product": "ROBOT_IRONING",
+    "vol_gate_q": 5,
+    "fold": "D2+D3->D4",
+    "gate": {
+      "passed": false,
+      "cond1_edge_dominance": true,
+      "cond1_median_excess": 9.211235633654416,
+      "cond1_frac_edge_clears_half_spread": 0.8723599632690542,
+      "cond2_per_day_positive_ic": true,
+      "cond2_per_day_ic": {
+        "4": 0.10301074639060992
+      },
+      "cond3_per_day_positive_pnl": false,
+      "cond3_per_day_pnl": {
+        "4": -34240.0
+      },
+      "cond4_trend_defense": false,
+      "cond4_quintile_pnl": {
+        "0": -1800.0,
+        "1": -3505.0,
+        "2": -10095.0,
+        "3": -5770.0,
+        "4": -13070.0
+      },
+      "live_haircut": 0.3,
+      "edge_clear_min_frac": 0.15
+    }
+  },
+  {
+    "target": "fwd_ret",
+    "horizon": 50,
+    "model": "ridge",
+    "product": "ROBOT_LAUNDRY",
+    "vol_gate_q": 5,
+    "fold": "D2+D3->D4",
+    "gate": {
+      "passed": false,
+      "cond1_edge_dominance": false,
+      "cond1_median_excess": -0.7669138080143534,
+      "cond1_frac_edge_clears_half_spread": 0.3821947010455791,
+      "cond2_per_day_positive_ic": false,
+      "cond2_per_day_ic": {
+        "4": -0.06506652666168225
+      },
+      "cond3_per_day_positive_pnl": false,
+      "cond3_per_day_pnl": {
+        "4": -60570.0
+      },
+      "cond4_trend_defense": false,
+      "cond4_quintile_pnl": {
+        "0": -12850.0,
+        "1": -10360.0,
+        "2": -15555.0,
+        "3": -5705.0,
+        "4": -16100.0
+      },
+      "live_haircut": 0.3,
+      "edge_clear_min_frac": 0.15
+    }
+  },
+  {
+    "target": "fwd_ret",
+    "horizon": 50,
+    "model": "lgbm",
+    "product": "ROBOT_LAUNDRY",
+    "vol_gate_q": 5,
+    "fold": "D2+D3->D4",
+    "gate": {
+      "passed": false,
+      "cond1_edge_dominance": true,
+      "cond1_median_excess": 3.653832134531493,
+      "cond1_frac_edge_clears_half_spread": 0.7512942848441783,
+      "cond2_per_day_positive_ic": false,
+      "cond2_per_day_ic": {
+        "4": -0.06484604381090452
+      },
+      "cond3_per_day_positive_pnl": false,
+      "cond3_per_day_pnl": {
+        "4": -81550.0
+      },
+      "cond4_trend_defense": true,
+      "cond4_quintile_pnl": {
+        "0": -21020.0,
+        "1": -16060.0,
+        "2": -21900.0,
+        "3": -10615.0,
+        "4": -11955.0
+      },
+      "live_haircut": 0.3,
+      "edge_clear_min_frac": 0.15
+    }
+  },
+  {
+    "target": "fwd_ret",
+    "horizon": 100,
+    "model": "ridge",
+    "product": "ROBOT_LAUNDRY",
+    "vol_gate_q": 5,
+    "fold": "D2+D3->D4",
+    "gate": {
+      "passed": false,
+      "cond1_edge_dominance": true,
+      "cond1_median_excess": 1.233870934535421,
+      "cond1_frac_edge_clears_half_spread": 0.6265687174778084,
+      "cond2_per_day_positive_ic": false,
+      "cond2_per_day_ic": {
+        "4": -0.08345222472531666
+      },
+      "cond3_per_day_positive_pnl": false,
+      "cond3_per_day_pnl": {
+        "4": -59190.0
+      },
+      "cond4_trend_defense": true,
+      "cond4_quintile_pnl": {
+        "0": -6100.0,
+        "1": -13630.0,
+        "2": -20125.0,
+        "3": -5080.0,
+        "4": -14255.0
+      },
+      "live_haircut": 0.3,
+      "edge_clear_min_frac": 0.15
+    }
+  },
+  {
+    "target": "fwd_ret",
+    "horizon": 100,
+    "model": "lgbm",
+    "product": "ROBOT_LAUNDRY",
+    "vol_gate_q": 5,
+    "fold": "D2+D3->D4",
+    "gate": {
+      "passed": false,
+      "cond1_edge_dominance": true,
+      "cond1_median_excess": 8.503278423598239,
+      "cond1_frac_edge_clears_half_spread": 0.8515457606366698,
+      "cond2_per_day_positive_ic": false,
+      "cond2_per_day_ic": {
+        "4": -0.0548289720352051
+      },
+      "cond3_per_day_positive_pnl": false,
+      "cond3_per_day_pnl": {
+        "4": -59850.0
+      },
+      "cond4_trend_defense": true,
+      "cond4_quintile_pnl": {
+        "0": -13760.0,
+        "1": -12835.0,
+        "2": -14230.0,
+        "3": -8575.0,
+        "4": -10450.0
+      },
+      "live_haircut": 0.3,
+      "edge_clear_min_frac": 0.15
+    }
+  },
+  {
+    "target": "fwd_ret",
+    "horizon": 50,
+    "model": "ridge",
+    "product": "ROBOT_MOPPING",
+    "vol_gate_q": 5,
+    "fold": "D2+D3->D4",
+    "gate": {
+      "passed": false,
+      "cond1_edge_dominance": false,
+      "cond1_median_excess": -2.0813883072001986,
+      "cond1_frac_edge_clears_half_spread": 0.2045477616485636,
+      "cond2_per_day_positive_ic": true,
+      "cond2_per_day_ic": {
+        "4": 0.04448108811102446
+      },
+      "cond3_per_day_positive_pnl": false,
+      "cond3_per_day_pnl": {
+        "4": -32310.0
+      },
+      "cond4_trend_defense": true,
+      "cond4_quintile_pnl": {
+        "0": -5680.0,
+        "1": -5380.0,
+        "2": -9215.0,
+        "3": -7585.0,
+        "4": -4450.0
+      },
+      "live_haircut": 0.3,
+      "edge_clear_min_frac": 0.15
+    }
+  },
+  {
+    "target": "fwd_ret",
+    "horizon": 50,
+    "model": "lgbm",
+    "product": "ROBOT_MOPPING",
+    "vol_gate_q": 5,
+    "fold": "D2+D3->D4",
+    "gate": {
+      "passed": false,
+      "cond1_edge_dominance": true,
+      "cond1_median_excess": 3.280246827010364,
+      "cond1_frac_edge_clears_half_spread": 0.7094711196832809,
+      "cond2_per_day_positive_ic": true,
+      "cond2_per_day_ic": {
+        "4": 0.008391960626154684
+      },
+      "cond3_per_day_positive_pnl": false,
+      "cond3_per_day_pnl": {
+        "4": -93650.0
+      },
+      "cond4_trend_defense": true,
+      "cond4_quintile_pnl": {
+        "0": -23245.0,
+        "1": -16210.0,
+        "2": -13960.0,
+        "3": -18285.0,
+        "4": -21950.0
+      },
+      "live_haircut": 0.3,
+      "edge_clear_min_frac": 0.15
+    }
+  },
+  {
+    "target": "fwd_ret",
+    "horizon": 100,
+    "model": "ridge",
+    "product": "ROBOT_MOPPING",
+    "vol_gate_q": 5,
+    "fold": "D2+D3->D4",
+    "gate": {
+      "passed": false,
+      "cond1_edge_dominance": false,
+      "cond1_median_excess": -0.6950178449859852,
+      "cond1_frac_edge_clears_half_spread": 0.42026323844505664,
+      "cond2_per_day_positive_ic": false,
+      "cond2_per_day_ic": {
+        "4": -0.029023027854245355
+      },
+      "cond3_per_day_positive_pnl": false,
+      "cond3_per_day_pnl": {
+        "4": -58170.0
+      },
+      "cond4_trend_defense": false,
+      "cond4_quintile_pnl": {
+        "0": -8925.0,
+        "1": -10320.0,
+        "2": -11860.0,
+        "3": -12850.0,
+        "4": -14215.0
+      },
+      "live_haircut": 0.3,
+      "edge_clear_min_frac": 0.15
+    }
+  },
+  {
+    "target": "fwd_ret",
+    "horizon": 100,
+    "model": "lgbm",
+    "product": "ROBOT_MOPPING",
+    "vol_gate_q": 5,
+    "fold": "D2+D3->D4",
+    "gate": {
+      "passed": false,
+      "cond1_edge_dominance": true,
+      "cond1_median_excess": 6.540418420312701,
+      "cond1_frac_edge_clears_half_spread": 0.7922660952963984,
+      "cond2_per_day_positive_ic": false,
+      "cond2_per_day_ic": {
+        "4": -0.047613668095324815
+      },
+      "cond3_per_day_positive_pnl": false,
+      "cond3_per_day_pnl": {
+        "4": -94360.0
+      },
+      "cond4_trend_defense": false,
+      "cond4_quintile_pnl": {
+        "0": -25280.0,
+        "1": -19655.0,
+        "2": -7855.0,
+        "3": -14360.0,
+        "4": -27210.0
+      },
+      "live_haircut": 0.3,
+      "edge_clear_min_frac": 0.15
+    }
+  },
+  {
+    "target": "fwd_ret",
+    "horizon": 50,
+    "model": "ridge",
+    "product": "ROBOT_VACUUMING",
+    "vol_gate_q": 5,
+    "fold": "D2+D3->D4",
+    "gate": {
+      "passed": false,
+      "cond1_edge_dominance": false,
+      "cond1_median_excess": -1.76442017743551,
+      "cond1_frac_edge_clears_half_spread": 0.13612831184651306,
+      "cond2_per_day_positive_ic": false,
+      "cond2_per_day_ic": {
+        "4": -0.03813960474388017
+      },
+      "cond3_per_day_positive_pnl": false,
+      "cond3_per_day_pnl": {
+        "4": -34410.0
+      },
+      "cond4_trend_defense": true,
+      "cond4_quintile_pnl": {
+        "0": -6110.0,
+        "1": -4255.0,
+        "2": -10025.0,
+        "3": -6485.0,
+        "4": -7535.0
+      },
+      "live_haircut": 0.3,
+      "edge_clear_min_frac": 0.15
+    }
+  },
+  {
+    "target": "fwd_ret",
+    "horizon": 50,
+    "model": "lgbm",
+    "product": "ROBOT_VACUUMING",
+    "vol_gate_q": 5,
+    "fold": "D2+D3->D4",
+    "gate": {
+      "passed": false,
+      "cond1_edge_dominance": true,
+      "cond1_median_excess": 2.133247007161736,
+      "cond1_frac_edge_clears_half_spread": 0.6827733225053294,
+      "cond2_per_day_positive_ic": false,
+      "cond2_per_day_ic": {
+        "4": -0.0029942515333550982
+      },
+      "cond3_per_day_positive_pnl": false,
+      "cond3_per_day_pnl": {
+        "4": -79170.0
+      },
+      "cond4_trend_defense": true,
+      "cond4_quintile_pnl": {
+        "0": -12265.0,
+        "1": -16860.0,
+        "2": -20650.0,
+        "3": -13650.0,
+        "4": -15745.0
+      },
+      "live_haircut": 0.3,
+      "edge_clear_min_frac": 0.15
+    }
+  },
+  {
+    "target": "fwd_ret",
+    "horizon": 100,
+    "model": "ridge",
+    "product": "ROBOT_VACUUMING",
+    "vol_gate_q": 5,
+    "fold": "D2+D3->D4",
+    "gate": {
+      "passed": false,
+      "cond1_edge_dominance": false,
+      "cond1_median_excess": -0.8938092405969378,
+      "cond1_frac_edge_clears_half_spread": 0.34333231302928274,
+      "cond2_per_day_positive_ic": true,
+      "cond2_per_day_ic": {
+        "4": 0.004603305130493105
+      },
+      "cond3_per_day_positive_pnl": false,
+      "cond3_per_day_pnl": {
+        "4": -74320.0
+      },
+      "cond4_trend_defense": true,
+      "cond4_quintile_pnl": {
+        "0": -14470.0,
+        "1": -14910.0,
+        "2": -16035.0,
+        "3": -14395.0,
+        "4": -14510.0
+      },
+      "live_haircut": 0.3,
+      "edge_clear_min_frac": 0.15
+    }
+  },
+  {
+    "target": "fwd_ret",
+    "horizon": 100,
+    "model": "lgbm",
+    "product": "ROBOT_VACUUMING",
+    "vol_gate_q": 5,
+    "fold": "D2+D3->D4",
+    "gate": {
+      "passed": false,
+      "cond1_edge_dominance": true,
+      "cond1_median_excess": 5.811514755068616,
+      "cond1_frac_edge_clears_half_spread": 0.8039995918783798,
+      "cond2_per_day_positive_ic": true,
+      "cond2_per_day_ic": {
+        "4": 0.010869203216947138
+      },
+      "cond3_per_day_positive_pnl": false,
+      "cond3_per_day_pnl": {
+        "4": -98430.0
+      },
+      "cond4_trend_defense": false,
+      "cond4_quintile_pnl": {
+        "0": -13425.0,
+        "1": -20360.0,
+        "2": -18480.0,
+        "3": -21180.0,
+        "4": -24985.0
+      },
+      "live_haircut": 0.3,
+      "edge_clear_min_frac": 0.15
+    }
+  }
+]

@@ -1,0 +1,130 @@
+[
+  {
+    "target": "fwd_ret",
+    "horizon": 50,
+    "model": "ridge",
+    "product": "POOLED",
+    "vol_gate_q": 5,
+    "fold": "D2+D3->D4",
+    "gate": {
+      "passed": false,
+      "cond1_edge_dominance": false,
+      "cond1_median_excess": -4.424191019305072,
+      "cond1_frac_edge_clears_half_spread": 0.05473555984164044,
+      "cond2_per_day_positive_ic": true,
+      "cond2_per_day_ic": {
+        "4": 0.040658155874257355
+      },
+      "cond3_per_day_positive_pnl": false,
+      "cond3_per_day_pnl": {
+        "4": -28760.0
+      },
+      "cond4_trend_defense": true,
+      "cond4_quintile_pnl": {
+        "0": 1907.0,
+        "1": -11926.0,
+        "2": 3020.0,
+        "3": -23204.0,
+        "4": 1443.0
+      },
+      "live_haircut": 0.3,
+      "edge_clear_min_frac": 0.15
+    }
+  },
+  {
+    "target": "fwd_ret",
+    "horizon": 50,
+    "model": "lgbm",
+    "product": "POOLED",
+    "vol_gate_q": 5,
+    "fold": "D2+D3->D4",
+    "gate": {
+      "passed": false,
+      "cond1_edge_dominance": false,
+      "cond1_median_excess": -1.1141192724586269,
+      "cond1_frac_edge_clears_half_spread": 0.41766318140290326,
+      "cond2_per_day_positive_ic": true,
+      "cond2_per_day_ic": {
+        "4": 0.005291331381401396
+      },
+      "cond3_per_day_positive_pnl": false,
+      "cond3_per_day_pnl": {
+        "4": -164393.5
+      },
+      "cond4_trend_defense": false,
+      "cond4_quintile_pnl": {
+        "0": 20940.5,
+        "1": -40731.0,
+        "2": 36799.0,
+        "3": -53135.0,
+        "4": -128267.0
+      },
+      "live_haircut": 0.3,
+      "edge_clear_min_frac": 0.15
+    }
+  },
+  {
+    "target": "fwd_ret",
+    "horizon": 100,
+    "model": "ridge",
+    "product": "POOLED",
+    "vol_gate_q": 5,
+    "fold": "D2+D3->D4",
+    "gate": {
+      "passed": false,
+      "cond1_edge_dominance": false,
+      "cond1_median_excess": -2.420899176145416,
+      "cond1_frac_edge_clears_half_spread": 0.2695643301703908,
+      "cond2_per_day_positive_ic": true,
+      "cond2_per_day_ic": {
+        "4": 0.04866029499833704
+      },
+      "cond3_per_day_positive_pnl": false,
+      "cond3_per_day_pnl": {
+        "4": -59298.0
+      },
+      "cond4_trend_defense": true,
+      "cond4_quintile_pnl": {
+        "0": -22549.5,
+        "1": -30801.0,
+        "2": 18764.5,
+        "3": -18918.5,
+        "4": -5793.5
+      },
+      "live_haircut": 0.3,
+      "edge_clear_min_frac": 0.15
+    }
+  },
+  {
+    "target": "fwd_ret",
+    "horizon": 100,
+    "model": "lgbm",
+    "product": "POOLED",
+    "vol_gate_q": 5,
+    "fold": "D2+D3->D4",
+    "gate": {
+      "passed": false,
+      "cond1_edge_dominance": true,
+      "cond1_median_excess": 2.166264439638102,
+      "cond1_frac_edge_clears_half_spread": 0.6084073053770024,
+      "cond2_per_day_positive_ic": true,
+      "cond2_per_day_ic": {
+        "4": 0.005537934817792979
+      },
+      "cond3_per_day_positive_pnl": false,
+      "cond3_per_day_pnl": {
+        "4": -362800.0
+      },
+      "cond4_trend_defense": true,
+      "cond4_quintile_pnl": {
+        "0": -3146.0,
+        "1": -95976.5,
+        "2": -15783.0,
+        "3": -141668.5,
+        "4": -106226.0
+      },
+      "live_haircut": 0.3,
+      "edge_clear_min_frac": 0.15
+    }
+  }
+]

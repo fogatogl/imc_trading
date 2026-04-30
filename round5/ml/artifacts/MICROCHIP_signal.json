@@ -1,0 +1,54 @@
+{
+  "kind": "simple_signal",
+  "family": "MICROCHIP",
+  "product": "MICROCHIP_OVAL",
+  "signal": "neg_zscore_vwap_50",
+  "horizon": 100,
+  "live_haircut": 0.3,
+  "entry_buffer": 0.0,
+  "feature_means": [
+    0.13007937650393658
+  ],
+  "feature_stds": [
+    1.3649475083949292
+  ],
+  "coefs": [
+    1.1504831318057824
+  ],
+  "intercept": -16.343841668139248,
+  "block_pnl": [
+    346.0,
+    -76.0,
+    -41.0,
+    -824.0,
+    580.0,
+    118.0,
+    292.0,
+    446.0,
+    -101.0,
+    283.0,
+    428.0,
+    533.0,
+    -27.0,
+    292.0,
+    -201.0
+  ],
+  "total_pnl": 2048.0,
+  "block_sharpe": 0.37610207906567766,
+  "n_trades": 283,
+  "ml_gate_failure": {
+    "passed": false,
+    "n_trades": 824,
+    "g1_trade_edge": false,
+    "g1_win_rate": 0.4720873786407767,
+    "g1_mean_net": -2.837378640776699,
+    "g1_threshold_win_rate": 0.55,
+    "g2_block_sharpe": false,
+    "g2_sharpe_value": -0.28891139015772255,
+    "g2_threshold": 1.0,
+    "g3_per_day_pnl": false,
+    "g4_beats_baseline": false,
+    "block_pnl_total": -2338.0,
+    "block_pnl_n": 15
+  }
+}

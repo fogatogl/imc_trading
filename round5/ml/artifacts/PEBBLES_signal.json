@@ -1,0 +1,54 @@
+{
+  "kind": "simple_signal",
+  "family": "PEBBLES",
+  "product": "PEBBLES_XL",
+  "signal": "obi_l3",
+  "horizon": 100,
+  "live_haircut": 0.3,
+  "entry_buffer": 0.0,
+  "feature_means": [
+    -0.00010103947836236832
+  ],
+  "feature_stds": [
+    0.011963390867994424
+  ],
+  "coefs": [
+    -3.2232456287507305
+  ],
+  "intercept": 20.683367003367003,
+  "block_pnl": [
+    283.0,
+    -79.0,
+    1303.0,
+    549.0,
+    -428.0,
+    476.0,
+    -60.0,
+    535.0,
+    -474.0,
+    -572.0,
+    -152.0,
+    874.0,
+    95.0,
+    1129.0,
+    144.0
+  ],
+  "total_pnl": 3623.0,
+  "block_sharpe": 0.42352432055593797,
+  "n_trades": 185,
+  "ml_gate_failure": {
+    "passed": false,
+    "n_trades": 519,
+    "g1_trade_edge": false,
+    "g1_win_rate": 0.48747591522157996,
+    "g1_mean_net": 1.5240847784200386,
+    "g1_threshold_win_rate": 0.55,
+    "g2_block_sharpe": false,
+    "g2_sharpe_value": 0.06545505042563325,
+    "g2_threshold": 1.0,
+    "g3_per_day_pnl": false,
+    "g4_beats_baseline": false,
+    "block_pnl_total": 791.0,
+    "block_pnl_n": 15
+  }
+}

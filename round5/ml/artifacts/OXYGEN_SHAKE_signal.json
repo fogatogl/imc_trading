@@ -1,0 +1,54 @@
+{
+  "kind": "simple_signal",
+  "family": "OXYGEN_SHAKE",
+  "product": "OXYGEN_SHAKE_GARLIC",
+  "signal": "obi_l1",
+  "horizon": 50,
+  "live_haircut": 0.3,
+  "entry_buffer": 0.0,
+  "feature_means": [
+    -0.00023707931084576282
+  ],
+  "feature_stds": [
+    0.11865785440753969
+  ],
+  "coefs": [
+    0.6581128152752126
+  ],
+  "intercept": 6.382763819095477,
+  "block_pnl": [
+    -64.0,
+    0.0,
+    188.0,
+    369.0,
+    0.0,
+    0.0,
+    -261.0,
+    2.0,
+    193.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "total_pnl": 427.0,
+  "block_sharpe": 0.20543293023215684,
+  "n_trades": 32,
+  "ml_gate_failure": {
+    "passed": false,
+    "n_trades": 476,
+    "g1_trade_edge": false,
+    "g1_win_rate": 0.4474789915966387,
+    "g1_mean_net": -9.932773109243698,
+    "g1_threshold_win_rate": 0.55,
+    "g2_block_sharpe": false,
+    "g2_sharpe_value": -0.5234660825404402,
+    "g2_threshold": 1.0,
+    "g3_per_day_pnl": false,
+    "g4_beats_baseline": false,
+    "block_pnl_total": -4728.0,
+    "block_pnl_n": 15
+  }
+}

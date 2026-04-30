@@ -1,0 +1,45 @@
+{
+  "kind": "simple_signal",
+  "family": "UV_VISOR",
+  "product": "UV_VISOR_RED",
+  "signal": "neg_zscore_mid_50",
+  "horizon": 100,
+  "live_haircut": 0.3,
+  "entry_buffer": 0.0,
+  "feature_means": [
+    -0.05208562733304389
+  ],
+  "feature_stds": [
+    1.366950138242576
+  ],
+  "coefs": [
+    -4.978941553218446
+  ],
+  "intercept": 5.167920137600755,
+  "block_pnl": [
+    83.0,
+    127.0,
+    15.0,
+    103.0,
+    102.0,
+    -212.0,
+    169.0,
+    204.0,
+    50.0,
+    0.0,
+    157.0,
+    0.0,
+    170.0,
+    -171.0,
+    50.0
+  ],
+  "total_pnl": 847.0,
+  "block_sharpe": 0.4732157956081981,
+  "n_trades": 70,
+  "ml_gate_failure": {
+    "passed": false,
+    "reason": "too_few_trades n=10 < 30",
+    "n_trades": 10,
+    "block_pnl_total": 87.0
+  }
+}

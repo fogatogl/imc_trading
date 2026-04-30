@@ -29,7 +29,9 @@ This repository is used for IMC trading research and experiments.
 
 ## Backtesting
 
-**How to run** (from repo root, PowerShell):
+**Always run candidate strategies through BOTH engines** (Python `prosperity4bt` + Rust `rust_backtester`) on the round-4 days. They are independent implementations of the same exchange — agreement (< ~1% PnL delta) is a sanity check; large divergence flags engine-specific exploitation rather than real edge. Observed baseline agreement on `round3/486411/486411.py` against round-4 data: Python 360,149 vs Rust 360,281.50 (Δ 0.04%).
+
+**Python backtester** (from repo root, PowerShell):
 ```powershell
 $env:PYTHONPATH="imc_trading/imc-prosperity-4-backtester"
 .venv/Scripts/python.exe -m prosperity4bt <trader.py> 1--2 1--1 1-0
@@ -41,6 +43,13 @@ $env:PYTHONPATH="imc_trading/imc-prosperity-4-backtester"; .venv/Scripts/python.
 ```
 
 Omit `--no-vis` so the backtester opens the external visualizer automatically with the log pre-loaded.
+
+**Rust backtester** (cross-check engine, from repo root):
+```bash
+imc_trading/prosperity_rust_backtester/target/release/rust_backtester.exe --trader <trader.py> --dataset round4
+```
+
+Dataset aliases: `round1`..`round8`, `tutorial`, `latest`. Single day: `--day 1`. Persist artifacts (`combined.log`, `pnl_by_product.csv`, `trades.csv`, `metrics.json`) under `runs/<id>/`: add `--persist`. Uses PyO3 to call the Python trader — same `Logger` contract applies.
 
 **Visualizer log format (kevin-fu1 visualizer):**
 The kevin-fu1 visualizer (`https://kevin-fu1.github.io/imc-prosperity-4-visualizer/`) requires per-tick `lambdaLog` output embedded in the log JSON. The backtester only emits this when the trader itself prints a compressed-state JSON line to stdout each tick. Traders MUST include the standard `Logger` class and call `logger.flush(state, orders, conversions, trader_data)` at the end of `run()`. Without this, the visualizer renders only the activities CSV (PnL chart) and order-book / depth / trades panels stay empty.
@@ -97,7 +106,8 @@ Instead:
 | 1 | ASH_COATED_OSMIUM, INTARIAN_PEPPER_ROOT | `round1/trader_ash6_fix_doublefire.py` (ASH) + `round1/2800ash_final.py` (PEPPER) | [`round1/ROUND1_STRATEGY.md`](round1/ROUND1_STRATEGY.md) |
 | 2 | (TBD — research in progress) | — | — |
 | 3 | HYDROGEL_PACK, VELVETFRUIT_EXTRACT, VEV_{4000..6500} (10 vouchers) | [`round3/486411/486411.py`](round3/486411/486411.py) — official PnL **36,116** | [`round3/round3_findings.md`](round3/round3_findings.md), [`round3/round3_strategy.md`](round3/round3_strategy.md), [`round3/round3_analysis.ipynb`](round3/round3_analysis.ipynb) |
-| 4 | HYDROGEL_PACK, VELVETFRUIT_EXTRACT, VEV_{4000..6500} (10 vouchers) — **same as round 3, now with counterparty IDs** + manual `AETHER_CRYSTAL` exotics | — (research in progress) | [`round4/`](round4/) |
+| 4 | HYDROGEL_PACK, VELVETFRUIT_EXTRACT, VEV_{4000..6500} (10 vouchers) — **same as round 3, now with counterparty IDs** + manual `AETHER_CRYSTAL` exotics | [`round4/544098/544098.py`](round4/544098/544098.py) — official PnL **+99,202** | [`round4/round4_research.md`](round4/round4_research.md), [`round4/round4_options_research.md`](round4/round4_options_research.md), [`round4/round4_ve_vev_research.md`](round4/round4_ve_vev_research.md) |
+| 5 | 50 new products in 10 categories × 5 (galaxy sounds, sleep pods, microchips, pebbles, robots, UV-visors, translators, panels, oxygen shakes, snackpacks). **Limit = 10 per product.** Manual = Ignith news portfolio (Ashflow Alpha), quadratic fee `(vol/100)² · budget`, budget 1M | — (active) | [`round5/`](round5/) |
 
 ---
 
@@ -129,35 +139,67 @@ Per-product breakdown (official):
 
 ---
 
-## Round 4 — "The More The Merrier" (Current Focus)
+## Round 4 — Final Result (closed)
 
-Round 3 is closed. New work goes in `round4/`. Spec: [`round4/Round 4 - "The More The Merrier" 1e43d50cdd2383929a6981dced4dbc53.md`](round4/).
+Submitted strategy: [`round4/544098/544098.py`](round4/544098/544098.py) — concat of `final_hydro` + `final_voucher` + `final_ve` (round-3 hydrogel block + OU-corrected BS pricer trading 5000-5500 only + M67-boosted VE). Official platform PnL **+99,202 SeaShells** (single live day).
 
-**Algorithmic challenge — "Hello, I'm Mark":**
-- Same three product families as Round 3: `HYDROGEL_PACK` (limit 200), `VELVETFRUIT_EXTRACT` (limit 200), 10 `VEV_*` vouchers (limit 300 each).
-- **New for round 4:** `Trade.buyer` and `Trade.seller` fields are now populated with counterparty IDs (previously always `None`). Both in `state.market_trades` and historical CSV. The edge is: identify which counterparties are toxic / informed / passive and condition behavior on them.
-- VEV TTE in round 4 = **4 days** at start (down from 5 in round 3). Adjust `T_rem` initialisation in any options pricer.
+Per-product breakdown (official):
 
-**Manual challenge — "Vanilla Just Isn't Exotic Enough":**
-- Underlying `AETHER_CRYSTAL` simulated as GBM, zero drift, **σ_annual = 251 %**, 4 steps per trading day, 252 trading days per year.
-- Tradable: spot, 2-week and 3-week vanilla calls/puts, plus three exotics:
-  - **Chooser** (3-week expiry; at 2-week mark you pick call-or-put, taking whichever is ITM).
-  - **Binary put** (fixed payoff if S_T < K, else 0).
-  - **Knock-out put** (vanilla put unless S ever trades below the barrier — knocked to 0 if so).
-- Score = average PnL over 100 simulations of the underlying. Volume capped per product.
+| Product | PnL |
+|---------|----:|
+| HYDROGEL_PACK | +39,970 |
+| VEV_5100 | +22,704 |
+| VEV_5000 | +13,870 |
+| VELVETFRUIT_EXTRACT | +12,760 |
+| VEV_5200 | +6,001 |
+| VEV_5300 | +2,919 |
+| VEV_5400 | +779 |
+| VEV_5500 | +197 |
+| VEV_4000 / 4500 / 6000 / 6500 | 0 each (not quoted) |
+| **Total** | **+99,202** |
 
-**What carries from round 3:**
-- The submitted hydrogel block (`HP_MEAN=9991`, vol-armor `min(1, 30/std50)`, dual-tier dev thresholds 14/22) was the largest contributor at +19,712. Use it as the round-4 baseline before adding counterparty conditioning.
-- The OU-corrected BS pricer for VEV (`MR_STRENGTH=1.0`, `EDGE=1.5`, `TAKE_CAP=30`) was net-positive across the smile. VEV_4500 was the one bad strike — investigate before re-deploying as-is.
-- VE's z-score taker + tight maker was sub-noise. Worth re-considering whether to trade VE at all in round 4, or only as a hedge against the option book.
+**Submission progression** (each entry is one re-run on a different practice day):
+- 417667 (day 2): +16,410
+- 515364 (day 3): −23,531 — gradinv VEV pinned long, VE drifted −42 ticks
+- 516536 (day 3): +19,881 — post-fix variant
+- 544098 (day 4, final live): +99,202
 
-**Workflow rules carried over:**
-- One strategy file per product family — never mix products in a single research/ablation file (`feedback_separate_products`).
-- Backtest is a *gating filter*, not an optimiser. 3-day historical samples can't rank close strategies; prefer structural alpha (`feedback_alpha_not_backtest`).
-- No local plotting/comparison scripts. Open the kevin-fu1 visualizer once per variant (`feedback_no_local_compare_files`).
-- Keep `round3/` read-only as historical reference.
+**What worked vs round 3:**
+- **HP +39,970** (vs r3 +19,712, +103%): trending-aware anchor lifted hydrogel.
+- **VE +12,760** (vs r3 −2,531): M67 boost flipped VE from drag to alpha.
+- **VEV +46,470** (vs r3 +18,933): skipping deep-ITM (4000/4500) and far-OTM (6000/6500) avoided r3's −9k VEV_4000+VEV_4500 pit.
+- No catastrophic strike. Tightening the smile beat trying to fix it.
 
-**Research entrypoint:** to be created at `round4/round4_analysis.ipynb` once round 4 data ships.
+---
+
+## Round 5 — "The Final Stretch" (Current Focus)
+
+Round 4 closed. New work goes in `round5/`. Spec: [`round5/Round 5 - "The Final Stretch" eba3d50cdd238364a8ea01415d9a1afb.md`](round5/).
+
+**Hard reset — none of rounds 1-4 carry over.**
+
+**Algorithmic challenge — "Cherry Picking Winners":**
+- 50 new tradable products in 10 categories × 5 each. **Position limit 10 per product.**
+- Categories: `GALAXY_SOUNDS_*`, `SLEEP_POD_*`, `MICROCHIP_*`, `PEBBLES_*`, `ROBOT_*`, `UV_VISOR_*`, `TRANSLATOR_*`, `PANEL_*`, `OXYGEN_SHAKE_*`, `SNACKPACK_*`.
+- Spec: "some groups offer more market inefficiencies than others. In certain groups, strong patterns are embedded in the price movements" — i.e. only a subset has structural alpha; the rest are passive-MM grind.
+- 3 days of historical data: `dataset/ROUND_5/prices_round_5_day_{2,3,4}.csv` + `trades_round_5_day_{2,3,4}.csv`.
+
+**Manual challenge — "Extra! Extra! Read all about it!":**
+- Trade Ignith exchange for 1 day using Ashflow Alpha news to size positions across 9 goods.
+- **Quadratic fee: `fee = (volume/100)² · budget`**, budget = 1,000,000 SeaShells.
+- Sub-100% allocation allowed; unused budget expires worthless.
+- Optimisation = pick instruments where expected return per unit > marginal fee, and stop adding volume when marginal cost = marginal alpha.
+
+**What carries from prior rounds (workflow only — no code):**
+- One strategy file per product family — never mix categories in research files (`feedback_separate_products`).
+- Backtest is gating filter, not optimiser (`feedback_alpha_not_backtest`).
+- No local plot/compare scripts. Open kevin-fu1 visualizer once per variant (`feedback_no_local_compare_files`).
+- Both backtester engines (Python `prosperity4bt` + Rust `rust_backtester`) on round-5 days. Δ-agreement = sanity check.
+- Keep `round3/`, `round4/` read-only.
+
+**Limit-10 implication:** at limit=10, naive market-making fills are tiny. Edge per fill must dominate spread; passive quoting only profitable when hit rate × edge > inventory bleed. Expect that 4-6 categories of 50 are actively edge-bearing; rest are noise.
+
+**Research entrypoint:** to be created at `round5/round5_research.md` and notebook once initial pattern scan complete.
 
 ---
 

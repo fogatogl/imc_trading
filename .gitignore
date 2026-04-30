@@ -6,7 +6,7 @@ Desktop.ini
 .vscode/
 
 # Python
-__pycache__/
+**/__pycache__/
 *.py[cod]
 *.pyo
 *.pyd
@@ -24,7 +24,7 @@ env/
 ENV/
 
 # Jupyter
-.ipynb_checkpoints/
+**/.ipynb_checkpoints/
 
 # Secrets and local config
 .env
@@ -32,7 +32,10 @@ ENV/
 !.env.example
 .prosperity_token
 .prosperity_refresh
-.gitignore
+
+# Local Claude / MCP / agent config (per-machine, not project-wide)
+.claude/
+.mcp.json
 
 # Build/artifacts
 build/
@@ -44,11 +47,12 @@ target/
 backtests/
 ablations/
 
-# Agent/tooling workdirs
-.claude/
+# Stray backtest stdout dumps (top-level)
+ensemble_bt*.txt
+mr_full.log
+sf_full.log
 
-
-# Local mirror folders copied into this repo (keep ignored unless intentionally imported)
+# Heavy local mirrors / external repos copied into this tree
 Ctrl-Alt-DefeatTheMarket/
 imc_trading/
-Ctrl-Alt-DefeatTheMarket
+imc_commun/

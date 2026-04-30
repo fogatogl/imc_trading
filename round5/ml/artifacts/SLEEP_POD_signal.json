@@ -1,0 +1,54 @@
+{
+  "kind": "simple_signal",
+  "family": "SLEEP_POD",
+  "product": "SLEEP_POD_NYLON",
+  "signal": "obi_l1",
+  "horizon": 100,
+  "live_haircut": 0.3,
+  "entry_buffer": 0.0,
+  "feature_means": [
+    -7.687777046954926e-05
+  ],
+  "feature_stds": [
+    0.1630402503092447
+  ],
+  "coefs": [
+    0.6860647408511945
+  ],
+  "intercept": 2.665622895622896,
+  "block_pnl": [
+    0.0,
+    -98.0,
+    107.0,
+    -58.0,
+    -20.0,
+    95.0,
+    283.0,
+    0.0,
+    8.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "total_pnl": 317.0,
+  "block_sharpe": 0.2414019616094586,
+  "n_trades": 43,
+  "ml_gate_failure": {
+    "passed": false,
+    "n_trades": 116,
+    "g1_trade_edge": false,
+    "g1_win_rate": 0.4827586206896552,
+    "g1_mean_net": -3.5689655172413794,
+    "g1_threshold_win_rate": 0.55,
+    "g2_block_sharpe": false,
+    "g2_sharpe_value": -0.1522143619984745,
+    "g2_threshold": 1.0,
+    "g3_per_day_pnl": false,
+    "g4_beats_baseline": false,
+    "block_pnl_total": -414.0,
+    "block_pnl_n": 15
+  }
+}

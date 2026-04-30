@@ -1,0 +1,54 @@
+{
+  "kind": "simple_signal",
+  "family": "ROBOT",
+  "product": "ROBOT_DISHES",
+  "signal": "momentum_10",
+  "horizon": 20,
+  "live_haircut": 0.3,
+  "entry_buffer": 0.0,
+  "feature_means": [
+    0.40955562980287336
+  ],
+  "feature_stds": [
+    38.19811749274614
+  ],
+  "coefs": [
+    -5.92047865058715
+  ],
+  "intercept": 0.8443869027731373,
+  "block_pnl": [
+    -149.0,
+    -438.0,
+    -407.0,
+    -156.0,
+    -32.0,
+    224.0,
+    -509.0,
+    -207.0,
+    -156.0,
+    53.0,
+    3460.0,
+    1660.0,
+    612.0,
+    1916.0,
+    3624.0
+  ],
+  "total_pnl": 9495.0,
+  "block_sharpe": 0.4585361993652936,
+  "n_trades": 516,
+  "ml_gate_failure": {
+    "passed": false,
+    "n_trades": 276,
+    "g1_trade_edge": false,
+    "g1_win_rate": 0.427536231884058,
+    "g1_mean_net": -13.065217391304348,
+    "g1_threshold_win_rate": 0.55,
+    "g2_block_sharpe": false,
+    "g2_sharpe_value": -0.5596681534870561,
+    "g2_threshold": 1.0,
+    "g3_per_day_pnl": false,
+    "g4_beats_baseline": false,
+    "block_pnl_total": -3606.0,
+    "block_pnl_n": 15
+  }
+}
