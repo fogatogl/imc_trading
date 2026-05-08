@@ -1,10 +1,14 @@
 # Round 5 — Final Live Result & Postmortem
 
-**Submission:** [`580385/580385.py`](../580385/580385.py) — disjoint stack of per-family live-D4 winners (Block A naive MM ⊕ Block B naive MM with spread gate ⊕ Block C smart MM/pair/basket ⊕ Block E spike-fade taker ⊕ Block F galaxy cointegration oracle).
+**Combined result: +90,958 SeaShells** (algorithmic −4,791 + manual +95,749).
 
-**Live D5 PnL: −4,791 SeaShells.** Theoretical pre-submission stack: **+53,681**. Realised miss: **−58,472**.
+| Side | Result |
+|---|---:|
+| Algorithmic ([`580385/580385.py`](../580385/580385.py)) | **−4,791** |
+| Manual (Ignith news portfolio, see [`manual/FINAL_strategy.md`](manual/FINAL_strategy.md)) | **+95,749** |
+| **Round 5 total** | **+90,958** |
 
-The stack was built on the assumption that each family's best **single live D4 outcome** would replicate when shipped together on D5. It did not. This document records what worked, what broke, and what the next-year team should carry forward.
+The manual side carried the round. The algorithmic submission lost slightly vs a +53,681 pre-submission theoretical stack (Δ −58,472) — the stack was built on the assumption that each family's best **single live D4 outcome** would replicate when shipped together on D5. It did not. This document records what worked, what broke, and what the next-year team should carry forward, on both the algorithmic and manual sides.
 
 ---
 
@@ -155,10 +159,89 @@ Round 4's win came from *removing* the round-3 strikes that didn't work (VEV_400
 
 ---
 
-## 7. Files of record
+## 7. Manual round — Ignith news portfolio (+95,749)
 
-- **Strategy:** [`580385/580385.py`](../580385/580385.py)
-- **Live log:** [`580385/580385.log`](../580385/580385.log) (88 MB; activities CSV embedded in JSON)
-- **Live JSON snapshot:** [`580385/580385.json`](../580385/580385.json)
-- **Pre-submission expected breakdown:** [`round5/best_strategies/MANIFEST.md`](best_strategies/MANIFEST.md)
-- **Component sources:** [`round5/best_strategies/`](best_strategies/) (`549159.py`, `555509.py`, `556852.py`, `556909.py`, `558897.py`, `560161.py`, `560470.py`)
+**Result: +95,749 SeaShells** on 48% budget deployment.
+
+The manual side used the audit-corrected event-study framework in [`round5/manual/FINAL_strategy.md`](manual/FINAL_strategy.md) and [`round5/manual/final_strategy.py`](manual/final_strategy.py): translate each Ashflow Alpha article into `(r_est, σ)` anchored to a real-world event analogue, apply the closed-form optimum `x* = r/2` under quadratic fees, stop deploying volume past the optimum (47.5% of budget intentionally held in cash because marginal contribution turns negative).
+
+The submitted allocation deviated from the audit table on four names where we judged the wider competitor pool would systematically mis-price relative to the news magnitude. Round-5 manual scoring is partly relative to the field's positions, so behavioural-overlay logic was applied on top of the calibrated `r_est`.
+
+### Result vs audit expectation
+
+| Metric | Audit point estimate | Audit range | **Realised** |
+|---|---:|---|---:|
+| Total PnL | +$41,000 | $1k–$108k | **+$95,749** |
+| Budget deployed | 52.5% | — | 48% |
+
+Realised PnL sits near the upper end of the audit's plausible-worlds range, just below the aggressive-world estimate (+$107,825).
+
+### Per-product result
+
+| Product | Direction | % | Investment | Fee | PnL |
+|---|:-:|:-:|---:|---:|---:|
+| **Lava Cakes** | SELL | 17% | 170,000 | 28,900 | **+78,801** |
+| **Thermalite Core** | BUY | 10% | 100,000 | 10,000 | **+12,160** |
+| Pyroflex Cells | SELL | 6% | 60,000 | 3,600 | +8,121 |
+| Sulfur Reactor | BUY | 3% | 30,000 | 900 | +4,327 |
+| Ashes of Phoenix | SELL | 2% | 20,000 | 400 | +301 |
+| Scoria Paste | — | 0% | 0 | 0 | 0 |
+| Obsidian Cutlery | SELL | 2% | 20,000 | 400 | −2,383 |
+| Magma Ink | BUY | 6% | 60,000 | 3,600 | −2,264 |
+| Volcanic Incense | **BUY** | 2% | 20,000 | 400 | **−3,314** |
+| **Total** | — | **48%** | **480,000** | **48,200** | **+95,749** |
+
+Lava Cakes alone delivered **82% of total PnL** (+78,801 of +95,749). Top three names (Lava + Thermalite + Pyroflex) delivered **+99,082**, with the rest of the portfolio netting −3,333.
+
+### Behavioural deviations from the audit table
+
+| Product | Audit | Submitted | Reasoning | Outcome |
+|---|:-:|:-:|---|:-:|
+| Lava Cakes | SHORT 12.5% | **SHORT 17%** | Triple-driver recall (recall + lawsuits + vendor returns) is unambiguous. Crowd likely under-shorts due to caution; size up to capture relative-scoring edge. | ✅ correct |
+| Volcanic Incense | SHORT 7.5% | **LONG 2%** | Pump-pattern article will trigger reflexive crowd SHORT; fade with small LONG. | ❌ wrong (−3,314) |
+| Ashes of Phoenix | SHORT 5% | SHORT 2% | PR scandal but defensive corporate response → expect crowd over-shoots short side; haircut. | ≈ flat |
+| Obsidian Cutlery | SHORT 3.5% | SHORT 2% | Genuinely ambiguous; field also expected to size small; edge too thin. | ≈ flat |
+
+Other five names (Thermalite, Pyroflex, Magma Ink, Sulfur, Scoria) shipped within ±1% of the audit table.
+
+### Manual-round lessons
+
+1. **Audit framework gated the result.** Even with two directional losses (Volcanic Incense −3,314, Magma Ink −2,264), the portfolio cleared +$95k. Quadratic-fee discipline — 48% deployed not 100% — is what made the upside extraction efficient. The framework's design property was robustness across calibration worlds; the run is direct evidence of that holding.
+
+2. **Concentrate on structurally unambiguous signals.** Lava Cakes was the only news article with three independent negative drivers (recall + lawsuits + vendor returns). Sizing it up from 12.5% to 17% delivered +78,801. The audit's `x* = r/2` rule already rewards confidence (sized by `r_est`), so the deviation was second-order — but in the right direction.
+
+3. **Crowd-fading on ambiguous signals is uncorrelated with truth.** The Volcanic Incense fade (LONG against audit's SHORT) lost. The pump-pattern article was structurally suspect by audit standards, but the audit's call was still SHORT — guessing the crowd's reaction added nothing. Rule for next year: behavioural overrides only on names where the underlying signal is structurally clear, not on ambiguous ones.
+
+4. **r_est anchored to event-study analogues beat gut judgment.** The original (pre-audit) plan deployed 100% of budget on inflated `r_est` values; modeled expected PnL was +$140k, but cross-world stress test showed −$59k under efficient-market priors. The audit-corrected r/σ table rebalanced to robust positive expectation across all five worlds. Realised result confirms the calibration was directionally right.
+
+5. **Quadratic fee makes the unused-budget question backwards.** "Why am I only deploying 48%?" is the wrong question. The right question is: "what is the marginal PnL of the next dollar?" Past the optimum it's negative. Filling the budget is what the original (flawed) plan did, and it would have cost roughly $120k in expected PnL across realistic worlds.
+
+---
+
+## 8. Combined-round summary
+
+| Side | Result | Driver |
+|---|---:|---|
+| Algorithmic (Ignith MM) | **−4,791** | Stack of n=1 D4 winners; half regressed on D5 regime change. Lessons §1–§5 above. |
+| Manual (Ignith news portfolio) | **+95,749** | Audit-framework allocation with quadratic-fee discipline; Lava Cakes drove 82% of PnL. |
+| **Round 5 total** | **+90,958** | Manual carried; algo was a wash. |
+
+The two sides illustrate the same lesson from opposite directions:
+
+- **Algorithmic side** failed because outcomes were stacked without a calibration framework — n=1 D4 PnLs treated as alpha estimates.
+- **Manual side** worked because outcomes were stacked **with** a calibration framework — `r_est` anchored to event-study analogues, deployment derived from `x* = r/2`, stress-tested across multiple worlds before submission.
+
+**Single most important takeaway for next year:** the framework matters more than the inputs. The manual side won despite two wrong directional calls because the framework bounded the downside. The algorithmic side lost despite per-component validation because there was no framework over the ensemble — just additive optimism.
+
+---
+
+## 9. Files of record
+
+- **Algorithmic strategy:** [`580385/580385.py`](../580385/580385.py)
+- **Algorithmic live log:** [`580385/580385.log`](../580385/580385.log) (88 MB; activities CSV embedded in JSON)
+- **Algorithmic live JSON snapshot:** [`580385/580385.json`](../580385/580385.json)
+- **Algorithmic pre-submission expected breakdown:** [`round5/best_strategies/MANIFEST.md`](best_strategies/MANIFEST.md)
+- **Algorithmic component sources:** [`round5/best_strategies/`](best_strategies/) (`549159.py`, `555509.py`, `556852.py`, `556909.py`, `558897.py`, `560161.py`, `560470.py`)
+- **Manual strategy doc:** [`round5/manual/FINAL_strategy.md`](manual/FINAL_strategy.md)
+- **Manual calibration script:** [`round5/manual/final_strategy.py`](manual/final_strategy.py)
+- **Manual figures:** [`round5/manual/F1_final_allocation.png`](manual/F1_final_allocation.png), [`F3_robustness.png`](manual/F3_robustness.png), [`F4_cdf_comparison.png`](manual/F4_cdf_comparison.png), [`F5_contribution.png`](manual/F5_contribution.png)

@@ -107,7 +107,7 @@ Instead:
 | 2 | (TBD — research in progress) | — | — |
 | 3 | HYDROGEL_PACK, VELVETFRUIT_EXTRACT, VEV_{4000..6500} (10 vouchers) | [`round3/486411/486411.py`](round3/486411/486411.py) — official PnL **36,116** | [`round3/round3_findings.md`](round3/round3_findings.md), [`round3/round3_strategy.md`](round3/round3_strategy.md), [`round3/round3_analysis.ipynb`](round3/round3_analysis.ipynb) |
 | 4 | HYDROGEL_PACK, VELVETFRUIT_EXTRACT, VEV_{4000..6500} (10 vouchers) — **same as round 3, now with counterparty IDs** + manual `AETHER_CRYSTAL` exotics | [`round4/544098/544098.py`](round4/544098/544098.py) — official PnL **+99,202** | [`round4/round4_research.md`](round4/round4_research.md), [`round4/round4_options_research.md`](round4/round4_options_research.md), [`round4/round4_ve_vev_research.md`](round4/round4_ve_vev_research.md) |
-| 5 | 50 new products in 10 categories × 5 (galaxy sounds, sleep pods, microchips, pebbles, robots, UV-visors, translators, panels, oxygen shakes, snackpacks). **Limit = 10 per product.** Manual = Ignith news portfolio (Ashflow Alpha), quadratic fee `(vol/100)² · budget`, budget 1M | [`580385/580385.py`](580385/580385.py) — official PnL **−4,791** | [`round5/ROUND5_POSTMORTEM.md`](round5/ROUND5_POSTMORTEM.md), [`round5/round5_research.md`](round5/round5_research.md), [`round5/best_strategies/MANIFEST.md`](round5/best_strategies/MANIFEST.md) |
+| 5 | 50 new products in 10 categories × 5 (galaxy sounds, sleep pods, microchips, pebbles, robots, UV-visors, translators, panels, oxygen shakes, snackpacks). **Limit = 10 per product.** Manual = Ignith news portfolio (Ashflow Alpha), quadratic fee `(vol/100)² · budget`, budget 1M | [`580385/580385.py`](580385/580385.py) (algo) + [`round5/manual/FINAL_strategy.md`](round5/manual/FINAL_strategy.md) (manual) — algo **−4,791**, manual **+95,749**, total **+90,958** | [`round5/ROUND5_POSTMORTEM.md`](round5/ROUND5_POSTMORTEM.md), [`round5/round5_research.md`](round5/round5_research.md), [`round5/best_strategies/MANIFEST.md`](round5/best_strategies/MANIFEST.md) |
 
 ---
 
@@ -174,9 +174,30 @@ Per-product breakdown (official):
 
 ## Round 5 — Final Result (closed)
 
-Submitted strategy: [`580385/580385.py`](580385/580385.py) — disjoint stack of per-family live-D4 winners (Block A naive MM ⊕ Block B naive MM with spread gate ⊕ Block C smart MM/pair/basket ⊕ Block E spike-fade taker ⊕ Block F galaxy cointegration oracle). Official platform PnL **−4,791 SeaShells** (single live day = D5).
+**Combined: +90,958 SeaShells** (algorithmic **−4,791** + manual **+95,749**). Manual side carried the round; algo was a slight loss vs theoretical stack. Full breakdown and lessons in [`round5/ROUND5_POSTMORTEM.md`](round5/ROUND5_POSTMORTEM.md).
 
-Pre-submission theoretical stack (per [`round5/best_strategies/MANIFEST.md`](round5/best_strategies/MANIFEST.md)): **+53,681**. Realised miss: **−58,472**. Full breakdown and lessons in [`round5/ROUND5_POSTMORTEM.md`](round5/ROUND5_POSTMORTEM.md).
+### Algorithmic — −4,791
+
+Submitted strategy: [`580385/580385.py`](580385/580385.py) — disjoint stack of per-family live-D4 winners (Block A naive MM ⊕ Block B naive MM with spread gate ⊕ Block C smart MM/pair/basket ⊕ Block E spike-fade taker ⊕ Block F galaxy cointegration oracle). Official platform PnL **−4,791 SeaShells** (single live day = D5). Pre-submission theoretical stack (per [`round5/best_strategies/MANIFEST.md`](round5/best_strategies/MANIFEST.md)): **+53,681**. Realised miss: **−58,472**.
+
+### Manual — +95,749
+
+Submitted allocation: see [`round5/manual/FINAL_strategy.md`](round5/manual/FINAL_strategy.md) (audit-corrected event-study framework). 48% of budget deployed; quadratic-fee discipline kept 52% in cash because marginal contribution turns negative past `x* = r/2`.
+
+| Product | Direction | % | PnL |
+|---|:-:|:-:|---:|
+| Lava Cakes | SELL | 17% | **+78,801** |
+| Thermalite Core | BUY | 10% | +12,160 |
+| Pyroflex Cells | SELL | 6% | +8,121 |
+| Sulfur Reactor | BUY | 3% | +4,327 |
+| Ashes of Phoenix | SELL | 2% | +301 |
+| Scoria Paste | — | 0% | 0 |
+| Obsidian Cutlery | SELL | 2% | −2,383 |
+| Magma Ink | BUY | 6% | −2,264 |
+| Volcanic Incense | BUY | 2% | −3,314 |
+| **Total** | — | **48%** | **+95,749** |
+
+Lava Cakes alone drove **82%** of manual PnL. Audit point estimate +$41k under skeptic priors with $1k–$108k cross-world range; realised +$95,749 sits near the aggressive-world estimate (+$107,825). Behavioural overrides vs the audit table on Lava Cakes (sized up from 12.5% to 17% — correct), Volcanic Incense (flipped LONG vs audit's SHORT — wrong, lost −3,314), Ashes (sized down — flat), Obsidian (sized down — flat). Lesson: behavioural deviations from a calibrated table belong only on names where the underlying signal is structurally clear.
 
 Per-family breakdown (official):
 

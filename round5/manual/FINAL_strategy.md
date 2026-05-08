@@ -4,6 +4,52 @@
 
 ---
 
+## Live Result — **+95,749 SeaShells**
+
+The submitted allocation differed from the audit-optimal table below; values were re-tuned where we judged the wider competitor pool would over- or under-react relative to the news magnitude. Round-5 manual scoring is partly relative to other players' positions, so the calibrated `r_est` was deliberately shifted on a few names where consensus was likely to overshoot (extra haircut) or undershoot (extra conviction).
+
+### Final allocations submitted vs PnL booked
+
+| Product | Direction | % of budget | Investment | Fee | **PnL** |
+|---|:-:|:-:|---:|---:|---:|
+| **Lava Cakes** | SELL | 17% | 170,000 | 28,900 | **+78,801** |
+| **Thermalite Core** | BUY | 10% | 100,000 | 10,000 | **+12,160** |
+| Pyroflex Cells | SELL | 6% | 60,000 | 3,600 | +8,121 |
+| Sulfur Reactor | BUY | 3% | 30,000 | 900 | +4,327 |
+| Ashes of Phoenix | SELL | 2% | 20,000 | 400 | +301 |
+| Scoria Paste | — | 0% | 0 | 0 | 0 |
+| Obsidian Cutlery | SELL | 2% | 20,000 | 400 | −2,383 |
+| Magma Ink | BUY | 6% | 60,000 | 3,600 | −2,264 |
+| Volcanic Incense | **BUY** | 2% | 20,000 | 400 | **−3,314** |
+| **Total** | — | **48% spent** | **480,000** | **48,200** | **+95,749** |
+
+**Expectation comparison.** Audit point estimate was +$41k under skeptic priors with a $1k–$108k range across worlds. Realised +$95,749 sits in the upper half of that range, near the aggressive-world estimate (+$107,825). The dominant driver was Lava Cakes (+78,801, 82% of total PnL), where conviction was sized up from the audit's 12.5% to 17%.
+
+### Behavioural deviations from the audit table
+
+The audit assumed neutral pricing — every player using the same `r_est`. Round-5 manual rules tie scoring to relative outcome vs the field, so the actual submission shifted four names where we expected systematic mis-pricing by competitors:
+
+| Product | Audit | Submitted | Why deviation |
+|---|:-:|:-:|---|
+| Lava Cakes | SHORT 12.5% | **SHORT 17%** | Triple-driver recall is unambiguous; consensus likely under-shorts on caution. Sized up. |
+| Volcanic Incense | SHORT 7.5% | **LONG 2%** | Pump article likely triggers reflexive SHORT en masse; we faded the crowd with a small LONG. **Wrong call: lost −3,314.** |
+| Ashes of Phoenix | SHORT 5% | SHORT 2% | PR scandal, but defensive corporate response telegraphed → expected crowd-overshoot on the short. Sized down. |
+| Obsidian Cutlery | SHORT 3.5% | SHORT 2% | Genuinely ambiguous signal; expected the field to also size small. Edge thin → cut to minimum. |
+
+The other five names (Thermalite +10%, Pyroflex 6%, Magma Ink 6%, Sulfur 3%, Scoria 0%) shipped within ±1% of the audit table — no behavioural override.
+
+### What the result confirms
+
+- **Lava Cakes upsizing was correct.** The +78,801 single-product PnL alone exceeded the audit's full-portfolio expectation of +$41k. Confidence-weighted concentration on the highest-conviction name dominated the run.
+- **The Volcanic Incense fade was wrong.** Going LONG against the audit's SHORT recommendation cost −3,314. The crowd-fade hypothesis didn't hold; the original SHORT direction would have been profitable.
+- **Audit framework still gates the result.** Even with two directional misses (Volcanic Incense, Magma Ink), the portfolio cleared +$95k — exactly the robustness property the audit was designed to deliver. Quadratic-fee discipline (48% deployed, not 100%) is what made the upside extraction efficient.
+
+### Lesson for next year's manual round
+
+Behavioural overrides on the audit table are useful **only on names where the underlying signal is structurally clear** (Lava Cakes triple-driver). On ambiguous names (Volcanic Incense pump pattern), guessing the crowd's reaction is uncorrelated with the right answer — better to follow the audit `r_est` straight. The +95k result is largely the audit doing its job; the one behavioural deviation against the audit was the one that lost.
+
+---
+
 ## TL;DR
 
 After three rounds of analysis — initial recommendation, comprehensive study, and methodology audit — the final strategy is:
