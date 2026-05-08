@@ -16,11 +16,12 @@ retraced and reproduced end-to-end.
 | 2 | manual challenge only | [`round2/final.py`](round2/final.py) | — |
 | 3 | `HYDROGEL_PACK`, `VELVETFRUIT_EXTRACT`, 10× `VEV_*` vouchers | [`round3/486411/486411.py`](round3/486411/486411.py) | **+36,116** |
 | 4 | same instruments as round 3, plus counterparty IDs and `AETHER_CRYSTAL` exotic | [`round4/544098/544098.py`](round4/544098/544098.py) | **+99,202** |
-| 5 | 50 new products (10 categories × 5), position limit 10 each | [`round5/strats/research/strat_ens_v1_snk_coint.py`](round5/strats/research/strat_ens_v1_snk_coint.py) | (live result pending) |
+| 5 | 50 new products (10 categories × 5), position limit 10 each | [`580385/580385.py`](580385/580385.py) | **−4,791** |
 
 Round-3 PnL breakdown lives in [`CLAUDE.md`](CLAUDE.md#round-3--final-result-closed)
 and [`round3/round3_strategy.md`](round3/round3_strategy.md). Round-4
 breakdown is in the same `CLAUDE.md` section and [`round4/round4_research.md`](round4/round4_research.md).
+Round-5 breakdown and full postmortem are in [`round5/ROUND5_POSTMORTEM.md`](round5/ROUND5_POSTMORTEM.md).
 
 ---
 
@@ -44,11 +45,45 @@ The pipeline that generated them lives under [`round5/ml/`](round5/ml/) and
 
 ---
 
-## Round 5 — final ensemble composition
+## Round 5 — final ensemble composition (live PnL **−4,791**)
 
-The submitted ensemble is a disjoint stack of per-family live winners. Each
-block was the live D5 winner for its family, then composed into one trader
-with shared `traderData` (state never crosses block boundaries).
+The submitted ensemble [`580385/580385.py`](580385/580385.py) is a disjoint
+stack of per-family **live D4** winners. Each block was the live-D4 winner
+for its family, composed into one trader with shared `traderData` (state
+never crosses block boundaries). The pre-submission theoretical stack
+summed to **+53,681**; the realised live D5 result was **−4,791**
+(Δ −58,472). Full postmortem in
+[`round5/ROUND5_POSTMORTEM.md`](round5/ROUND5_POSTMORTEM.md).
+
+### Per-family final result (live D5)
+
+| Family | Live D5 | Pre-submission expected | Δ |
+|---|---:|---:|---:|
+| GALAXY_SOUNDS | +13,801 | +3,441 | **+10,360** |
+| SNACKPACK | +12,766 | +4,546 | +8,220 |
+| PEBBLES | +8,914 | +10,428 | −1,514 |
+| ROBOT | +5,610 | +4,165 | +1,445 |
+| PANEL | 0 | +11 | −11 |
+| MICROCHIP | −859 | +4,411 | −5,270 |
+| OXYGEN_SHAKE | −6,221 | +3,497 | −9,718 |
+| UV_VISOR | −8,149 | +8,640 | −16,789 |
+| TRANSLATOR | −13,596 | +4,832 | −18,428 |
+| SLEEP_POD | −17,057 | +9,710 | **−26,767** |
+| **Total** | **−4,791** | **+53,681** | **−58,472** |
+
+The loss was concentrated in 6 products (`PEBBLES_S −30,141`,
+`UV_VISOR_RED −10,327`, `SLEEP_POD_POLYESTER −10,045`,
+`SLEEP_POD_NYLON −8,929`, `TRANSLATOR_VOID_BLUE −7,855`,
+`OXYGEN_SHAKE_CHOCOLATE −7,024` = combined **−74,321**); the remaining
+44 products netted **+69,530**.
+
+Only the GALAXY cointegration oracle (Block F) beat its expectation
+(4× over). The SNACKPACK 4-pair basket (Block C) also exceeded. PANEL's
+trend-filtered MM neutralised cleanly on the directional D5 — the same
+construction without the filter would have lost. Every family relying on
+naive top-of-book MM with `qty=cap` and no trend defence regressed.
+
+### Ensemble blocks
 
 | Block | Source submission(s) | Products / mechanic |
 |---|---|---|
@@ -153,8 +188,12 @@ they were learned:
 - **R4 — anchor lift, not anchor change.** The hydrogel mid drifted up between rounds; lifting the anchor (instead of replacing the model) doubled the P&L.
 - **R4 — trim the smile, do not fix it.** Skipping deep-ITM (4000/4500) and far-OTM (6000/6500) VEV strikes turned a −9 k pit into a +46 k bucket.
 - **R5 — backtest is a gate, not an optimiser.** Round-5 MM backtests inflated ~10× over live. Per-family live D5 ranking, not 3-day BT total, is the only valid selector.
-- **R5 — per-family disjoint stacking beats one-size-fits-all.** The final ensemble picks the live D5 winner per family and runs them in disjoint blocks of one trader, rather than tuning a single mechanic to cover all 50 products.
 - **R5 — naive top-of-book MM has zero trend defence.** PANEL submission 559949 lost −3,155 live on a smooth down-drift day after BT +54,985 on bouncier days; needs hard inventory cap or trend filter when the family lacks structural alpha.
+- **R5 — n=1 D4 winners do not stack.** The submitted ensemble was a disjoint stack of each family's best single-live-D4 outcome. On D5 (another n=1 draw), half the picks regressed — final result **−4,791** vs theoretical **+53,681**. n=1 outcomes are draws, not alpha; require per-day-positive on every available day before promoting.
+- **R5 — structural alpha replicates, statistical alpha does not.** GALAXY cointegration oracle returned **+13,801** vs **+3,441** expected (4× over) — fair value from regression of related mids, trade residual on `\|z\|>2`. Every block relying on stationary mean-rev around a fitted constant regressed.
+- **R5 — pair β fit on 3 days is fragile on day 4.** The SLEEP_POD `slp_cp` pair (`COTTON ↔ POLYESTER`, β=−0.795 OLS on D2-D4, ent=1.6) lost **−18,973** on POLYESTER+NYLON legs because D5 residual diverged. Cointegration p-value passing in-sample is not the right screen; rank by β stability + intra-day half-life instead.
+- **R5 — combined-trader backtest is mandatory.** No combined BT of `580385.py` was run before submission — only per-component validation. Component validation is not ensemble validation; ship-blocking rule for next year is one combined BT pass on both engines.
+- **R5 — concentration risk hides inside hedged baskets.** PEBBLES star netted **+8,914** only because `PEBBLES_XL` drew **+41,269** against S/M/L/XS shorts of −34k. Same trader with XL drawing the other direction = ≈−34,000. The basket's "neutrality" was an n=1 directional draw on the anchor leg, not residual capture.
 
 Each of these is also captured in
 [`CLAUDE.md`](CLAUDE.md) and the per-round research docs.
