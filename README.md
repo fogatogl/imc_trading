@@ -13,7 +13,7 @@ retraced and reproduced end-to-end.
 | Leaderboard | Rank | Field | Percentile |
 |---|---:|---:|---:|
 | Worldwide | **581** | 18,803 | top 3.1% |
-| France | **21** | 4,021 | top 0.6% |
+| France | **21** | 632 | top 3.3% |
 
 ---
 
