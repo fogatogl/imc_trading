@@ -107,7 +107,7 @@ Instead:
 | 2 | (TBD — research in progress) | — | — |
 | 3 | HYDROGEL_PACK, VELVETFRUIT_EXTRACT, VEV_{4000..6500} (10 vouchers) | [`round3/486411/486411.py`](round3/486411/486411.py) — official PnL **36,116** | [`round3/round3_findings.md`](round3/round3_findings.md), [`round3/round3_strategy.md`](round3/round3_strategy.md), [`round3/round3_analysis.ipynb`](round3/round3_analysis.ipynb) |
 | 4 | HYDROGEL_PACK, VELVETFRUIT_EXTRACT, VEV_{4000..6500} (10 vouchers) — **same as round 3, now with counterparty IDs** + manual `AETHER_CRYSTAL` exotics | [`round4/544098/544098.py`](round4/544098/544098.py) — official PnL **+99,202** | [`round4/round4_research.md`](round4/round4_research.md), [`round4/round4_options_research.md`](round4/round4_options_research.md), [`round4/round4_ve_vev_research.md`](round4/round4_ve_vev_research.md) |
-| 5 | 50 new products in 10 categories × 5 (galaxy sounds, sleep pods, microchips, pebbles, robots, UV-visors, translators, panels, oxygen shakes, snackpacks). **Limit = 10 per product.** Manual = Ignith news portfolio (Ashflow Alpha), quadratic fee `(vol/100)² · budget`, budget 1M | — (active) | [`round5/`](round5/) |
+| 5 | 50 new products in 10 categories × 5 (galaxy sounds, sleep pods, microchips, pebbles, robots, UV-visors, translators, panels, oxygen shakes, snackpacks). **Limit = 10 per product.** Manual = Ignith news portfolio (Ashflow Alpha), quadratic fee `(vol/100)² · budget`, budget 1M | [`580385/580385.py`](580385/580385.py) — official PnL **−4,791** | [`round5/ROUND5_POSTMORTEM.md`](round5/ROUND5_POSTMORTEM.md), [`round5/round5_research.md`](round5/round5_research.md), [`round5/best_strategies/MANIFEST.md`](round5/best_strategies/MANIFEST.md) |
 
 ---
 
@@ -172,34 +172,47 @@ Per-product breakdown (official):
 
 ---
 
-## Round 5 — "The Final Stretch" (Current Focus)
+## Round 5 — Final Result (closed)
 
-Round 4 closed. New work goes in `round5/`. Spec: [`round5/Round 5 - "The Final Stretch" eba3d50cdd238364a8ea01415d9a1afb.md`](round5/).
+Submitted strategy: [`580385/580385.py`](580385/580385.py) — disjoint stack of per-family live-D4 winners (Block A naive MM ⊕ Block B naive MM with spread gate ⊕ Block C smart MM/pair/basket ⊕ Block E spike-fade taker ⊕ Block F galaxy cointegration oracle). Official platform PnL **−4,791 SeaShells** (single live day = D5).
 
-**Hard reset — none of rounds 1-4 carry over.**
+Pre-submission theoretical stack (per [`round5/best_strategies/MANIFEST.md`](round5/best_strategies/MANIFEST.md)): **+53,681**. Realised miss: **−58,472**. Full breakdown and lessons in [`round5/ROUND5_POSTMORTEM.md`](round5/ROUND5_POSTMORTEM.md).
 
-**Algorithmic challenge — "Cherry Picking Winners":**
-- 50 new tradable products in 10 categories × 5 each. **Position limit 10 per product.**
-- Categories: `GALAXY_SOUNDS_*`, `SLEEP_POD_*`, `MICROCHIP_*`, `PEBBLES_*`, `ROBOT_*`, `UV_VISOR_*`, `TRANSLATOR_*`, `PANEL_*`, `OXYGEN_SHAKE_*`, `SNACKPACK_*`.
-- Spec: "some groups offer more market inefficiencies than others. In certain groups, strong patterns are embedded in the price movements" — i.e. only a subset has structural alpha; the rest are passive-MM grind.
-- 3 days of historical data: `dataset/ROUND_5/prices_round_5_day_{2,3,4}.csv` + `trades_round_5_day_{2,3,4}.csv`.
+Per-family breakdown (official):
 
-**Manual challenge — "Extra! Extra! Read all about it!":**
-- Trade Ignith exchange for 1 day using Ashflow Alpha news to size positions across 9 goods.
-- **Quadratic fee: `fee = (volume/100)² · budget`**, budget = 1,000,000 SeaShells.
-- Sub-100% allocation allowed; unused budget expires worthless.
-- Optimisation = pick instruments where expected return per unit > marginal fee, and stop adding volume when marginal cost = marginal alpha.
+| Family | Live D5 | Expected | Δ |
+|---|---:|---:|---:|
+| GALAXY_SOUNDS | +13,801 | +3,441 | **+10,360** |
+| SNACKPACK | +12,766 | +4,546 | +8,220 |
+| PEBBLES | +8,914 | +10,428 | −1,514 |
+| ROBOT | +5,610 | +4,165 | +1,445 |
+| PANEL | 0 | +11 | −11 |
+| MICROCHIP | −859 | +4,411 | −5,270 |
+| OXYGEN_SHAKE | −6,221 | +3,497 | −9,718 |
+| UV_VISOR | −8,149 | +8,640 | −16,789 |
+| TRANSLATOR | −13,596 | +4,832 | −18,428 |
+| SLEEP_POD | −17,057 | +9,710 | **−26,767** |
+| **Total** | **−4,791** | **+53,681** | **−58,472** |
 
-**What carries from prior rounds (workflow only — no code):**
-- One strategy file per product family — never mix categories in research files (`feedback_separate_products`).
-- Backtest is gating filter, not optimiser (`feedback_alpha_not_backtest`).
-- No local plot/compare scripts. Open kevin-fu1 visualizer once per variant (`feedback_no_local_compare_files`).
-- Both backtester engines (Python `prosperity4bt` + Rust `rust_backtester`) on round-5 days. Δ-agreement = sanity check.
-- Keep `round3/`, `round4/` read-only.
+**Where the loss came from:** 6 products (PEBBLES_S −30,141, UV_RED −10,327, SLP_POLY −10,045, SLP_NYLON −8,929, TRANS_BLUE −7,855, OXY_CHOC −7,024) lost a combined **−74,321**. The remaining 44 products netted +69,530.
 
-**Limit-10 implication:** at limit=10, naive market-making fills are tiny. Edge per fill must dominate spread; passive quoting only profitable when hit rate × edge > inventory bleed. Expect that 4-6 categories of 50 are actively edge-bearing; rest are noise.
+**What worked:**
+- **GLX cointegration oracle** (+13,801 vs +3,441 expected, 4× over) — fair value from regression of related galaxy mids; trade residual on `|z|>2`. Only family that beat its expectation.
+- **SNACKPACK 4-pair basket** (+12,766 vs +4,546) — disjoint pair legs with entry threshold 2.0; survived regime change.
+- **PANEL trend-filtered MM** (0, neutralised) — ema30 vs ema200 gating prevented the directional-drift losses that killed naive MM elsewhere.
 
-**Research entrypoint:** to be created at `round5/round5_research.md` and notebook once initial pattern scan complete.
+**What broke:**
+- **Naive `qty=cap` MM with no trend defense** lost on D5 directional drift (UV_RED, TRANS_VOID_BLUE, TRANS_GRAPHITE_MIST, OXY_CHOC, MIC_CIRCLE). Memory `feedback_naive_mm_no_trend_defense` flagged this exact mode after PANEL 559949; fix was applied to PANEL only.
+- **Pair regression β unstable across days** — SLP slp_cp pair (β=−0.795 OLS on D2-D4) lost −19k on POL+NYL legs because D5 residual went the wrong way. Memory `feedback_pairs_screen` warned to rank by β stability, not coint p-value.
+- **Theoretical stack from n=1 winners with no combined backtest** — manifest summed each family's best single-live-D4 PnL, never ran the combined trader through Python or Rust BT before shipping. No opportunity to apply BT-decay heuristic.
+- **Concentration risk inside "neutral" PEB star** — basket netted +8,914 only because PEBBLES_XL drew +41,269 against S/M/L/XS shorts of −34k. Same trader with XL drawing the other way = ~−34k. n=1 directional draw on the anchor leg, not clean residual capture.
+
+**Cross-family lessons (full version in [`ROUND5_POSTMORTEM.md`](round5/ROUND5_POSTMORTEM.md)):**
+1. Stop stacking n=1 outcomes. Require per-day-positive on every available day before promotion; ship 0 if no block clears that bar.
+2. Structural alpha (cointegration, baskets, fair-value oracles) replicates; statistical alpha (stationary mean-rev around a fitted constant) does not.
+3. Hard inventory cap (`|pos| ≤ position_limit / 2`) on every naive MM block — cheapest survival mechanic, would have saved 30-50k on this run.
+4. Single-trader combined backtest is mandatory before submission. Validating each component file individually is not sufficient.
+5. Final-round combined submission gets a memory-checklist review against every `feedback_*` entry collected during the round, treating the ensemble as a new artifact.
 
 ---
 
